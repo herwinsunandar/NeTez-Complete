@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Left Parallelogram with rounded corners -->
+    <path
+        android:fillColor="#0088A8"
+        android:pathData="M34,42 L52,42 C53,42 53.5,42.5 53,43.5 L37,81 C36.5,82 36,82 35,82 L17,82 C16,82 15.5,81.5 16,80.5 L32,42.5 C32.5,42 33,42 34,42 Z" />
+
+    <!-- Middle Hexagon -->
+    <path
+        android:fillColor="#0088A8"
+        android:pathData="M46,42 L54,42 C55,42 55.5,42.5 56,43.5 L61,51 C61.5,52 61.5,53 61,54 L56,61.5 C55.5,62.5 55,63 54,63 L46,63 C45,63 44.5,62.5 44,61.5 L39,54 C38.5,53 38.5,52 39,51 L44,43.5 C44.5,42.5 45,42 46,42 Z" />
+
+    <!-- Right Parallelogram with rounded corners -->
+    <path
+        android:fillColor="#0088A8"
+        android:pathData="M64,22 L82,22 C83,22 83.5,22.5 83,23.5 L67,61.5 C66.5,62.5 66,63 65,63 L47,63 C46,63 45.5,62.5 46,61.5 L62,23.5 C62.5,22.5 63,22 64,22 Z" />
+
+</vector>

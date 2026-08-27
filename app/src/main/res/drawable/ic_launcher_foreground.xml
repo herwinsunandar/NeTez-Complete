@@ -1,0 +1,39 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:scaleX="0.65"
+        android:scaleY="0.65"
+        android:translateX="19"
+        android:translateY="19">
+
+        <!-- Kiri -->
+        <path
+            android:fillColor="#0E90B8"
+            android:pathData="M23,80 L40,38 L58,38 L41,80 Z" />
+
+        <!-- Tengah -->
+        <path
+            android:fillColor="#0E90B8"
+            android:pathData="M58,38 L65,38 L72,55 L65,72 L58,72 L52,55 Z" />
+
+        <!-- Lipatan -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M58,38 C61,38 61,38 62,39
+                              L54,55
+                              L62,71
+                              C61,72 61,72 58,72
+                              L50,55 Z" />
+
+        <!-- Kanan -->
+        <path
+            android:fillColor="#0E90B8"
+            android:pathData="M65,72 L83,29 L100,29 L82,72 Z" />
+
+    </group>
+
+</vector>

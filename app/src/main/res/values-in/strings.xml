@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">NeTez</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_diagnostic">Diagnostik</string>
+    <string name="nav_scanner">Pemindai</string>
+    <string name="nav_utilities">Utilitas</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="nav_report">Laporan &amp; Riwayat</string>
+
+    <!-- Dashboard -->
+    <string name="dash_status">Ikhtisar Koneksi</string>
+    <string name="dash_signal">Kekuatan Sinyal</string>
+    <string name="dash_history">Aktivitas Terakhir</string>
+    <string name="dash_security">Keamanan</string>
+
+    <!-- Settings -->
+    <string name="set_appearance">Tampilan</string>
+    <string name="set_theme">Mode Tema</string>
+    <string name="set_language">Bahasa</string>
+    <string name="set_about">Tentang NeTez</string>
+    <string name="set_history_desc">Lihat semua log tes jaringan</string>
+
+    <!-- Quick Actions -->
+    <string name="action_quick_ping">PING CEPAT</string>
+    <string name="action_speedtest">SPEEDTEST</string>
+    <string name="action_whois">WHOIS</string>
+    <string name="action_ip_info">INFO IP</string>
+
+    <!-- Diagnostic Tab -->
+    <string name="diag_ping">Tes Ping</string>
+    <string name="diag_traceroute">Traceroute</string>
+    <string name="diag_speedtest">Tes Kecepatan</string>
+    <string name="diag_dns">Pencarian DNS</string>
+    <string name="diag_http_check">Cek HTTP</string>
+    <string name="diag_ssl_checker">Pemeriksa SSL/TLS</string>
+    <string name="diag_blacklist">Cek Blacklist</string>
+    <string name="blacklist_check_desc">Cek apakah IP terdaftar di DNSBL utama</string>
+    <string name="blacklist_btn_check_my_ip">Cek IP Saya</string>
+    <string name="blacklist_btn_check">CEK</string>
+    <string name="blacklist_status_listed">TERDAFTAR</string>
+    <string name="blacklist_status_clean">BERSIH</string>
+    <string name="blacklist_summary">%1$d Terdaftar, %2$d Bersih</string>
+    <string name="blacklist_invalid_ip">Alamat IP tidak valid</string>
+    <string name="blacklist_private_ip">IP Privat tidak dapat dicek</string>
+
+    <!-- Scanner Tab -->
+    <string name="scan_lan">Pemindai LAN</string>
+    <string name="scan_port">Pemindai Port</string>
+    <string name="scan_wifi">Penganalisis WiFi</string>
+    <string name="scan_bluetooth">Pemindai Bluetooth</string>
+    <string name="scan_mdns">Pemindai mDNS</string>
+    <string name="scan_channel_graph">Grafik Saluran</string>
+    <string name="scan_upnp">Pemindai UPnP</string>
+    <string name="scan_snmp">Pemindai SNMP</string>
+    <string name="wifi_detail">Detail WiFi</string>
+    <string name="cellular_detail">Detail Seluler</string>
+
+    <!-- Utilities Tab -->
+    <string name="util_ip_calc">Kalkulator IP</string>
+    <string name="util_whois">Whois &amp; Info IP</string>
+    <string name="util_http">Header HTTP</string>
+    <string name="util_http_lab">Penguji API / HTTP Lab</string>
+    <string name="util_wol">Bangunkan LAN (WoL)</string>
+    <string name="util_quick_notes">Catatan Cepat / Buku IP</string>
+    <string name="util_eng_tools">Alat Engineer</string>
+
+    <!-- Quick Notes -->
+    <string name="notes_search_hint">Cari judul, catatan, atau tag...</string>
+    <string name="notes_empty">Tidak ada catatan</string>
+    <string name="notes_add_title">Tambah Catatan</string>
+    <string name="notes_edit_title">Edit Catatan</string>
+    <string name="notes_field_title">Judul (IP/Domain/Label)</string>
+    <string name="notes_field_note">Catatan / Deskripsi</string>
+    <string name="notes_field_tag">Tag (misal: Router, Server)</string>
+    <string name="notes_pin">Sematkan ke atas</string>
+    <string name="notes_action_copy">SALIN</string>
+    <string name="notes_action_ping">PING</string>
+    <string name="notes_action_test_api">TEST API</string>
+    <string name="notes_import">Impor JSON</string>
+    <string name="notes_export">Ekspor JSON</string>
+    <string name="notes_delete_confirm">Hapus catatan ini?</string>
+
+    <!-- Engineer Tools -->
+    <string name="eng_ssh">SSH Client</string>
+    <string name="eng_telnet">Telnet Client</string>
+    <string name="eng_sftp">SFTP Client</string>
+    <string name="eng_tftp">TFTP Client</string>
+    <string name="eng_terminal">Terminal</string>
+    <string name="eng_save_session">Simpan Sesi</string>
+    <string name="eng_key_auth">Otentikasi Key</string>
+</resources>

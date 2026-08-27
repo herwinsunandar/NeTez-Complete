@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">NeTez</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_diagnostic">Diagnostic</string>
+    <string name="nav_scanner">Scanner</string>
+    <string name="nav_utilities">Utilities</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_report">Report &amp; History</string>
+
+    <!-- Dashboard -->
+    <string name="dash_status">Connection Overview</string>
+    <string name="dash_signal">Signal Strength</string>
+    <string name="dash_history">Recent Activity</string>
+    <string name="dash_security">Security</string>
+
+    <!-- Settings -->
+    <string name="set_appearance">Appearance</string>
+    <string name="set_theme">Theme Mode</string>
+    <string name="set_language">Language</string>
+    <string name="set_about">About NeTez</string>
+    <string name="set_history_desc">View all network test logs</string>
+
+    <!-- Quick Actions -->
+    <string name="action_quick_ping">QUICK PING</string>
+    <string name="action_speedtest">SPEEDTEST</string>
+    <string name="action_whois">WHOIS</string>
+    <string name="action_ip_info">IP INFO</string>
+
+    <!-- Diagnostic Tab -->
+    <string name="diag_ping">Ping Test</string>
+    <string name="diag_traceroute">Traceroute</string>
+    <string name="diag_speedtest">Speed Test</string>
+    <string name="diag_dns">DNS Lookup</string>
+    <string name="diag_http_check">HTTP Check</string>
+    <string name="diag_ssl_checker">SSL/TLS Checker</string>
+    <string name="diag_blacklist">Blacklist Check</string>
+    <string name="blacklist_check_desc">Check if IP is listed in major DNSBLs</string>
+    <string name="blacklist_btn_check_my_ip">Check My IP</string>
+    <string name="blacklist_btn_check">CHECK</string>
+    <string name="blacklist_status_listed">LISTED</string>
+    <string name="blacklist_status_clean">CLEAN</string>
+    <string name="blacklist_summary">%1$d Listed, %2$d Clean</string>
+    <string name="blacklist_invalid_ip">Invalid IP address</string>
+    <string name="blacklist_private_ip">Private IP cannot be checked</string>
+
+    <!-- Scanner Tab -->
+    <string name="scan_lan">LAN Scanner</string>
+    <string name="scan_port">Port Scanner</string>
+    <string name="scan_wifi">WiFi Analyzer</string>
+    <string name="scan_bluetooth">Bluetooth Scanner</string>
+    <string name="scan_mdns">mDNS Scanner</string>
+    <string name="scan_channel_graph">Channel Graph</string>
+    <string name="scan_upnp">UPnP Scanner</string>
+    <string name="scan_snmp">SNMP Scanner</string>
+    <string name="wifi_detail">WiFi Detail</string>
+    <string name="cellular_detail">Cellular Detail</string>
+
+    <!-- Utilities Tab -->
+    <string name="util_ip_calc">IP Calculator</string>
+    <string name="util_whois">Whois &amp; IP Info</string>
+    <string name="util_http">HTTP Header</string>
+    <string name="util_http_lab">API Tester / HTTP Lab</string>
+    <string name="util_wol">Wake on LAN</string>
+    <string name="util_quick_notes">Quick Notes / IP Book</string>
+    <string name="util_eng_tools">Engineer Tools</string>
+
+    <!-- Quick Notes -->
+    <string name="notes_search_hint">Search title, note, or tag...</string>
+    <string name="notes_empty">No notes found</string>
+    <string name="notes_add_title">Add Quick Note</string>
+    <string name="notes_edit_title">Edit Quick Note</string>
+    <string name="notes_field_title">Title (IP/Domain/Label)</string>
+    <string name="notes_field_note">Note / Description</string>
+    <string name="notes_field_tag">Tag (e.g. Router, Server)</string>
+    <string name="notes_pin">Pin to top</string>
+    <string name="notes_action_copy">COPY</string>
+    <string name="notes_action_ping">PING</string>
+    <string name="notes_action_test_api">TEST API</string>
+    <string name="notes_import">Import JSON</string>
+    <string name="notes_export">Export JSON</string>
+    <string name="notes_delete_confirm">Delete this note?</string>
+
+    <!-- Engineer Tools -->
+    <string name="eng_ssh">SSH Client</string>
+    <string name="eng_telnet">Telnet Client</string>
+    <string name="eng_sftp">SFTP Client</string>
+    <string name="eng_tftp">TFTP Client</string>
+    <string name="eng_terminal">Terminal</string>
+    <string name="eng_save_session">Save Session</string>
+    <string name="eng_key_auth">Key Authentication</string>
+</resources>
