@@ -29,10 +29,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.network.DomainInfo
 import com.herwin.netez.network.IpInfo
 import com.herwin.netez.network.WhoisResult
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.WhoisViewModel
+import com.herwin.netez.ui.components.ResultRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,32 +99,42 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
             contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            if (uiState.result != null && uiState.result !is WhoisResult.Error) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Whois & IP Information",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row {
+                            IconButton(onClick = {
+                                viewModel.copyResultsToClipboard()
+                                Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(AppIcons.contentCopy(), contentDescription = "Copy Results", tint = Color(0xFF6C8CFF))
+                            }
+                            IconButton(onClick = {
+                                viewModel.shareResults(context)
+                            }) {
+                                Icon(AppIcons.share(), contentDescription = "Share Results", tint = Color(0xFF6C8CFF))
+                            }
+                        }
+                    }
+                }
+            }
+
             when (val res = uiState.result) {
                 is WhoisResult.Ip -> {
                     item { IpResultLayout(res.info) }
-                    item {
-                        com.herwin.netez.ui.components.ResultFooter(
-                            fullTextToCopy = res.info.toString(),
-                            onCopyAll = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Whois Data", res.info.toString()))
-                                Toast.makeText(context, "All data copied", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
                 }
                 is WhoisResult.Domain -> {
                     item { DomainResultLayout(res.info) }
-                    item {
-                        com.herwin.netez.ui.components.ResultFooter(
-                            fullTextToCopy = res.info.raw,
-                            onCopyAll = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Whois Data", res.info.raw))
-                                Toast.makeText(context, "All data copied", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
                 }
                 is WhoisResult.Error -> {
                     item {
@@ -162,11 +174,11 @@ fun IpResultLayout(info: IpInfo) {
         Surface(shape = RoundedCornerShape(20.dp), color = SoftDarkBg) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 WhoisSectionHeader("LOCATION", Icons.Default.LocationOn)
-                com.herwin.netez.ui.components.ResultRow("Country", "${info.country} ${getFlagEmoji(info.countryCode)}")
-                com.herwin.netez.ui.components.ResultRow("Region / City", "${info.regionName}, ${info.city}")
-                com.herwin.netez.ui.components.ResultRow("Zip Code", info.zip)
-                com.herwin.netez.ui.components.ResultRow("Timezone", info.timezone)
-                com.herwin.netez.ui.components.ResultRow("Coordinates", "${info.lat}, ${info.lon}")
+                ResultRow("Country", "${info.country} ${getFlagEmoji(info.countryCode)}", showCopyIcon = false)
+                ResultRow("Region / City", "${info.regionName}, ${info.city}", showCopyIcon = false)
+                ResultRow("Zip Code", info.zip, showCopyIcon = false)
+                ResultRow("Timezone", info.timezone, showCopyIcon = false)
+                ResultRow("Coordinates", "${info.lat}, ${info.lon}", showCopyIcon = false)
                 
                 Button(
                     onClick = {
@@ -192,15 +204,15 @@ fun IpResultLayout(info: IpInfo) {
         Surface(shape = RoundedCornerShape(20.dp), color = SoftDarkBg) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 WhoisSectionHeader("NETWORK", Icons.Default.Dns)
-                com.herwin.netez.ui.components.ResultRow("ISP", info.isp)
-                com.herwin.netez.ui.components.ResultRow("Organization", info.org)
+                ResultRow("ISP", info.isp, showCopyIcon = false)
+                ResultRow("Organization", info.org, showCopyIcon = false)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("ASN", style = MaterialTheme.typography.labelSmall, color = TextGray)
                     Surface(color = Color(0xFF6C8CFF).copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
                         Text(info.asn, color = Color(0xFF6C8CFF), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 }
-                com.herwin.netez.ui.components.ResultRow("Reverse DNS", info.reverse)
+                ResultRow("Reverse DNS", info.reverse, showCopyIcon = false)
             }
         }
 
@@ -228,10 +240,10 @@ fun DomainResultLayout(info: DomainInfo) {
                 HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
 
                 WhoisSectionHeader("REGISTRATION", Icons.Default.Description)
-                com.herwin.netez.ui.components.ResultRow("Registrar", info.registrar)
-                com.herwin.netez.ui.components.ResultRow("Handle", info.handle)
-                com.herwin.netez.ui.components.ResultRow("Created", info.creationDate.substringBefore("T"))
-                com.herwin.netez.ui.components.ResultRow("Expires", info.expirationDate.substringBefore("T"))
+                ResultRow("Registrar", info.registrar, showCopyIcon = false)
+                ResultRow("Handle", info.handle, showCopyIcon = false)
+                ResultRow("Created", info.creationDate.substringBefore("T"), showCopyIcon = false)
+                ResultRow("Expires", info.expirationDate.substringBefore("T"), showCopyIcon = false)
                 
                 WhoisSectionHeader("NAMESERVERS", Icons.Default.Dns)
                 info.nameservers.forEach { ns ->

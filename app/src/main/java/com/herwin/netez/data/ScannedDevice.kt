@@ -13,6 +13,7 @@ data class ScannedDevice(
     val ip: String,
     val hostname: String,
     val vendor: String,
+    val deviceCategory: String,
     val deviceType: String,
     val os: String,
     val firstSeen: Long,

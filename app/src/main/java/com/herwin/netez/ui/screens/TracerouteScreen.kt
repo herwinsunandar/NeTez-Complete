@@ -10,9 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.network.Hop
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
@@ -82,7 +80,7 @@ fun TracerouteScreen(viewModel: TracerouteViewModel = viewModel()) {
                     if (uiState.isRunning) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Icon(Icons.Default.Route, null)
+                        Icon(AppIcons.route(), null)
                         Spacer(Modifier.width(8.dp))
                         Text("TRACE", fontWeight = FontWeight.ExtraBold)
                     }
@@ -92,7 +90,7 @@ fun TracerouteScreen(viewModel: TracerouteViewModel = viewModel()) {
 
         Spacer(Modifier.height(24.dp))
 
-        // Header with Copy
+        // Header with Copy & Share
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -105,18 +103,18 @@ fun TracerouteScreen(viewModel: TracerouteViewModel = viewModel()) {
                 color = Color.White
             )
             if (uiState.hops.isNotEmpty()) {
-                IconButton(onClick = {
-                    val log = StringBuilder()
-                    log.append("Traceroute Results for ${uiState.host}\n")
-                    log.append("------------------------------------\n")
-                    uiState.hops.forEach { 
-                        log.append("Hop #${it.number}: ${it.ip} (${it.hostname}) - ${it.latency}ms\n")
+                Row {
+                    IconButton(onClick = {
+                        viewModel.copyResultsToClipboard()
+                        Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(AppIcons.contentCopy(), null, tint = MaterialTheme.colorScheme.primary)
                     }
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Traceroute Log", log.toString()))
-                    Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
-                }) {
-                    Icon(Icons.Default.ContentCopy, null, tint = MaterialTheme.colorScheme.primary)
+                    IconButton(onClick = {
+                        viewModel.shareResults(context)
+                    }) {
+                        Icon(AppIcons.share(), null, tint = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
         }

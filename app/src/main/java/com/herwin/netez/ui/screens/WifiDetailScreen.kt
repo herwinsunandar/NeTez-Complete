@@ -7,8 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -18,13 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.viewmodels.WifiDetailViewModel
 import com.herwin.netez.utils.NetworkUtils
 import java.util.Locale
@@ -61,11 +60,11 @@ fun WifiDetailScreen(bssid: String, onNavigateBack: () -> Unit) {
 fun IdentitySection(result: ScanResult) {
     DetailCategory("Identity") {
         @Suppress("DEPRECATION")
-        DetailRow("SSID", if (result.SSID.isNullOrEmpty()) "[Hidden]" else result.SSID, Icons.Default.Wifi)
-        DetailRow("BSSID", result.BSSID, Icons.Default.Fingerprint)
-        DetailRow("Vendor", NetworkUtils.getVendor(result.BSSID), Icons.Default.Business)
+        DetailRow("SSID", if (result.SSID.isNullOrEmpty()) "[Hidden]" else result.SSID, AppIcons.wifi())
+        DetailRow("BSSID", result.BSSID, AppIcons.fingerprint())
+        DetailRow("Vendor", NetworkUtils.getVendor(LocalContext.current, result.BSSID), AppIcons.business())
         @Suppress("DEPRECATION")
-        DetailRow("Hidden", if (result.SSID.isNullOrEmpty()) "Yes" else "No", Icons.Default.VisibilityOff)
+        DetailRow("Hidden", if (result.SSID.isNullOrEmpty()) "Yes" else "No", AppIcons.visibilityOff())
     }
 }
 
@@ -73,21 +72,21 @@ fun IdentitySection(result: ScanResult) {
 fun RadioSection(result: ScanResult) {
     val quality = NetworkUtils.getSignalQuality(result.level)
     DetailCategory("Radio & Signal") {
-        DetailRow("Strength", "${result.level} dBm ($quality)", Icons.Default.SignalWifiStatusbar4Bar)
-        DetailRow("Frequency", "${result.frequency} MHz", Icons.Default.Waves)
-        DetailRow("Channel", NetworkUtils.getChannel(result.frequency).toString(), Icons.Default.Toll)
-        DetailRow("Standard", NetworkUtils.getWifiStandard(result), Icons.Default.SettingsInputAntenna)
-        DetailRow("Band", NetworkUtils.getFrequencyBand(result.frequency), Icons.Default.Layers)
+        DetailRow("Strength", "${result.level} dBm ($quality)", AppIcons.signalWifiStatusbar4Bar())
+        DetailRow("Frequency", "${result.frequency} MHz", AppIcons.waves())
+        DetailRow("Channel", NetworkUtils.getChannel(result.frequency).toString(), AppIcons.toll())
+        DetailRow("Standard", NetworkUtils.getWifiStandard(result), AppIcons.settingsInputAntenna())
+        DetailRow("Band", NetworkUtils.getFrequencyBand(result.frequency), AppIcons.layers())
     }
 }
 
 @Composable
 fun SecuritySection(result: ScanResult) {
     val isSecure = !result.capabilities.contains("OPEN")
-    val icon = if (isSecure) Icons.Default.Lock else Icons.Default.LockOpen
+    val icon = if (isSecure) AppIcons.lock() else AppIcons.lockOpen()
     DetailCategory("Security") {
         DetailRow("Type", result.capabilities, icon)
-        DetailRow("WPS", if (result.capabilities.contains("WPS")) "Enabled" else "Disabled", Icons.Default.Security)
+        DetailRow("WPS", if (result.capabilities.contains("WPS")) "Enabled" else "Disabled", AppIcons.security())
     }
 }
 
@@ -95,8 +94,8 @@ fun SecuritySection(result: ScanResult) {
 fun AdditionalSection(result: ScanResult) {
     val distance = NetworkUtils.estimateDistance(result.level, result.frequency)
     DetailCategory("Additional Info") {
-        DetailRow("Est. Distance", "~${String.format(Locale.US, "%.1f", distance)} meters", Icons.Default.Straighten)
-        DetailRow("Timestamp", result.timestamp.toString(), Icons.Default.Schedule)
+        DetailRow("Est. Distance", "~${String.format(Locale.US, "%.1f", distance)} meters", AppIcons.straighten())
+        DetailRow("Timestamp", result.timestamp.toString(), AppIcons.schedule())
     }
 }
 
@@ -138,7 +137,7 @@ fun SignalGraphSection(history: List<Int>) {
 }
 
 @Composable
-fun DetailCategory(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun DetailCategory(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Surface(
@@ -153,7 +152,7 @@ fun DetailCategory(title: String, content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun DetailRow(label: String, value: String, icon: ImageVector) {
+private fun DetailRow(label: String, value: String, icon: Painter) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(12.dp))

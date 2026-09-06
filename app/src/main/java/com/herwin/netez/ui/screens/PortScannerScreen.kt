@@ -7,26 +7,29 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.network.PortResult
+import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.ResultFooter
+import com.herwin.netez.ui.components.ResultRow
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.PortFilter
@@ -117,7 +120,7 @@ fun PortScannerScreen(viewModel: PortScannerViewModel = viewModel()) {
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
                 ) {
                     if (uiState.isScanning) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
                         Text("START SCAN", fontWeight = FontWeight.ExtraBold)
                     }
@@ -235,7 +238,7 @@ fun PortResultCard(result: PortResult, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = Color.White.copy(alpha = 0.04f),
-        border = if (result.isOpen) androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.2f)) else null
+        border = if (result.isOpen) BorderStroke(1.dp, statusColor.copy(alpha = 0.2f)) else null
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -249,7 +252,7 @@ fun PortResultCard(result: PortResult, onClick: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = getServiceIcon(result.port),
+                    painter = getServiceIcon(result.port),
                     contentDescription = null,
                     tint = if (result.isOpen) statusColor else TextGray,
                     modifier = Modifier.size(24.dp)
@@ -284,10 +287,10 @@ fun PortDetailContent(port: PortResult, ip: String, context: Context) {
         
         Card(colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))) {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                com.herwin.netez.ui.components.ResultRow("Service", port.service)
-                com.herwin.netez.ui.components.ResultRow("Protocol", port.protocol)
-                com.herwin.netez.ui.components.ResultRow("Latency", "${port.latencyMs} ms")
-                if (port.banner != null) com.herwin.netez.ui.components.ResultRow("Banner", port.banner)
+                ResultRow("Service", port.service)
+                ResultRow("Protocol", port.protocol)
+                ResultRow("Latency", "${port.latencyMs} ms")
+                if (port.banner != null) ResultRow("Banner", port.banner)
             }
         }
 
@@ -305,27 +308,27 @@ fun PortDetailContent(port: PortResult, ip: String, context: Context) {
             }
         }
 
-        com.herwin.netez.ui.components.ResultFooter(
+        ResultFooter(
             fullTextToCopy = "IP: $ip, Port: ${port.port}, Service: ${port.service}, Banner: ${port.banner ?: "None"}",
             onCopyAll = {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Port Info", "IP: $ip, Port: ${port.port}, Service: ${port.service}"))
-                android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show()
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Port Info", "IP: $ip, Port: ${port.port}, Service: ${port.service}"))
+                Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
             }
         )
         Spacer(Modifier.height(32.dp))
     }
 }
 
-fun getServiceIcon(port: Int): androidx.compose.ui.graphics.vector.ImageVector {
+@Composable
+fun getServiceIcon(port: Int): Painter {
     return when (port) {
-        80, 443, 8080 -> Icons.Default.Language
-        22 -> Icons.Default.Terminal
-        53 -> Icons.Default.Dns
-        21, 445 -> Icons.Default.Folder
-        3306, 5432 -> Icons.Default.Storage
-        8291 -> Icons.Default.Router
-        else -> Icons.Default.SettingsInputComponent
+        80, 443, 8080 -> AppIcons.language()
+        22 -> AppIcons.terminal()
+        53 -> AppIcons.dns()
+        21, 445 -> AppIcons.folder()
+        3306, 5432 -> AppIcons.storage()
+        8291 -> AppIcons.router()
+        else -> AppIcons.settingsInputComponent()
     }
 }
-

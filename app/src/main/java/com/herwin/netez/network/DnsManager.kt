@@ -44,7 +44,8 @@ data class DnsResponse(
     val records: List<DnsRecord>,
     val resolver: String,
     val resolverIp: String,
-    val latency: Long = 0
+    val latency: Long = 0,
+    val status: Int = 0
 )
 
 object DnsManager {
@@ -76,11 +77,16 @@ object DnsManager {
                 val endTime = System.currentTimeMillis()
                 val latency = endTime - startTime
                 
-                if (!response.isSuccessful) return@withContext DnsResponse(emptyList(), server.name, server.ip, latency)
+                if (!response.isSuccessful) return@withContext DnsResponse(emptyList(), server.name, server.ip, latency, -1)
                 
-                val body = response.body?.string() ?: return@withContext DnsResponse(emptyList(), server.name, server.ip, latency)
+                val body = response.body?.string() ?: return@withContext DnsResponse(emptyList(), server.name, server.ip, latency, -1)
                 val json = JSONObject(body)
-                val answer = json.optJSONArray("Answer") ?: return@withContext DnsResponse(emptyList(), server.name, server.ip, latency)
+                val status = json.optInt("Status", 0)
+                val answer = json.optJSONArray("Answer")
+                
+                if (answer == null) {
+                    return@withContext DnsResponse(emptyList(), server.name, server.ip, latency, status)
+                }
                 
                 val results = mutableListOf<DnsRecord>()
                 for (i in 0 until answer.length()) {
@@ -98,10 +104,10 @@ object DnsManager {
                     
                     results.add(record)
                 }
-                DnsResponse(results, server.name, server.ip, latency)
+                DnsResponse(results, server.name, server.ip, latency, status)
             }
         } catch (e: Exception) {
-            DnsResponse(emptyList(), server.name, server.ip, 0)
+            DnsResponse(emptyList(), server.name, server.ip, 0, -1)
         }
     }
 

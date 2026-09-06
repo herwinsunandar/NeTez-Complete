@@ -1,5 +1,6 @@
 package com.herwin.netez.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -15,13 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.tooling.preview.Preview
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.theme.NeTezTheme
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
@@ -45,7 +46,7 @@ fun IpCalculatorScreen(
     onNavigateToScan: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -95,27 +96,39 @@ fun IpCalculatorScreen(
                             modifier = Modifier.weight(1f),
                             singleLine = true
                         )
-                        IconButton(onClick = {
-                            val res = uiState.result
-                            if (res != null) {
-                                val text = """
-                                    Network: ${res.networkId}/${res.cidr}
-                                    Broadcast: ${res.broadcast}
-                                    Range: ${res.firstHost} - ${res.lastHost}
-                                    Mask: ${res.mask}
-                                    Usable Hosts: ${res.totalHosts}
-                                    Binary: ${res.binaryIp}
-                                """.trimIndent()
-                                clipboardManager.setText(AnnotatedString(text))
-                            }
-                        }) {
-                            Icon(Icons.Default.ContentCopy, null, tint = MaterialTheme.colorScheme.primary)
-                        }
                     }
                 }
             }
 
             uiState.result?.let { result ->
+                // Share & Copy Row (Like Ping Test)
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Network Information",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row {
+                            IconButton(onClick = {
+                                viewModel.copyToClipboard()
+                                Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(AppIcons.contentCopy(), contentDescription = "Copy Results", tint = Color(0xFF6C8CFF))
+                            }
+                            IconButton(onClick = {
+                                viewModel.shareResults(context)
+                            }) {
+                                Icon(AppIcons.share(), contentDescription = "Share Results", tint = Color(0xFF6C8CFF))
+                            }
+                        }
+                    }
+                }
                 // Chips Row
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

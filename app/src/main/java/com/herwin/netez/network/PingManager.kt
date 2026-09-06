@@ -17,7 +17,6 @@ data class PingResult(
 object PingManager {
     suspend fun ping(host: String, packetSize: Int = 56): PingResult = withContext(Dispatchers.IO) {
         try {
-            // -c 1: count 1, -s size: packet size
             val process = Runtime.getRuntime().exec("ping -c 1 -s $packetSize $host")
             val reader = BufferedReader(InputStreamReader(process.inputStream))
             var line: String?

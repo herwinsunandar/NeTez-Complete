@@ -1,21 +1,21 @@
 package com.herwin.netez.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
@@ -72,18 +72,33 @@ fun TelnetConnectionForm(
                 
                 OutlinedTextField(
                     value = host, onValueChange = onHostChange,
-                    label = { Text("Host / IP") }, modifier = Modifier.fillMaxWidth()
+                    label = { Text("Host / IP", color = TextGray) }, 
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF6C8CFF),
+                        unfocusedBorderColor = TextGray
+                    )
                 )
                 
                 OutlinedTextField(
                     value = port, onValueChange = onPortChange,
-                    label = { Text("Port") }, modifier = Modifier.fillMaxWidth()
+                    label = { Text("Port", color = TextGray) }, 
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF6C8CFF),
+                        unfocusedBorderColor = TextGray
+                    )
                 )
                 
                 Button(
                     onClick = onConnect,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))
                 ) {
                     Text("CONNECT", fontWeight = FontWeight.ExtraBold)
                 }
@@ -102,7 +117,7 @@ fun TelnetTerminalView(output: List<String>, onSendCommand: (String) -> Unit, on
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             items(output) { line ->
-                Text(line, color = Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp)
+                Text(line, color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
             }
         }
         
@@ -118,14 +133,15 @@ fun TelnetTerminalView(output: List<String>, onSendCommand: (String) -> Unit, on
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
                     unfocusedTextColor = Color.White,
-                    focusedTextColor = Color.White
+                    focusedTextColor = Color.White,
+                    cursorColor = Color.Cyan
                 )
             )
             IconButton(onClick = { if (command.isNotBlank()) { onSendCommand(command); command = "" } }) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.Cyan)
+                Icon(AppIcons.send(), contentDescription = "Send", tint = Color.Cyan)
             }
             IconButton(onClick = onDisconnect) {
-                Icon(Icons.Default.PowerSettingsNew, contentDescription = "Disconnect", tint = Color.Red)
+                Icon(AppIcons.powerSettingsNew(), contentDescription = "Disconnect", tint = Color.Red)
             }
         }
     }

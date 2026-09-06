@@ -8,86 +8,199 @@
     <string name="nav_utilities">Utilitas</string>
     <string name="nav_settings">Pengaturan</string>
     <string name="nav_report">Laporan &amp; Riwayat</string>
+    <string name="history_total">Total %1$d Laporan</string>
+    <string name="history_clear_all">HAPUS SEMUA</string>
+    <string name="history_empty">Belum ada laporan yang dibuat.</string>
+    <string name="dash_pass_prompt">Simpan password pertama kamu 🔒</string>
 
     <!-- Dashboard -->
     <string name="dash_status">Ikhtisar Koneksi</string>
     <string name="dash_signal">Kekuatan Sinyal</string>
     <string name="dash_history">Aktivitas Terakhir</string>
-    <string name="dash_security">Keamanan</string>
+    <string name="diag_security">Keamanan</string>
+    <string name="nav_password_strength">Kekuatan Password</string>
+    <string name="security_password_manager">Password Manager</string>
+    <string name="diag_security_desc">Pemeriksa SSL, Daftar Hitam, dan lainnya</string>
 
     <!-- Settings -->
     <string name="set_appearance">Tampilan</string>
     <string name="set_theme">Mode Tema</string>
+    <string name="set_theme_system">Default Sistem</string>
+    <string name="set_theme_light">Terang</string>
+    <string name="set_theme_dark">Gelap</string>
     <string name="set_language">Bahasa</string>
     <string name="set_about">Tentang NeTez</string>
     <string name="set_history_desc">Lihat semua log tes jaringan</string>
 
-    <!-- Quick Actions -->
-    <string name="action_quick_ping">PING CEPAT</string>
-    <string name="action_speedtest">SPEEDTEST</string>
-    <string name="action_whois">WHOIS</string>
-    <string name="action_ip_info">INFO IP</string>
+    <!-- App Permission Scanner -->
+    <string name="security_app_scanner_title">Pemindai Izin Aplikasi</string>
+    <string name="security_posture_detail_title">Keamanan Perangkat</string>
+    <string name="security_recommendations_title">Rekomendasi Prioritas</string>
+    <string name="security_recommendations_empty">Tidak ada rekomendasi kritis saat ini.</string>
+    <string name="security_rescanning">Memindai ulang postur keamanan...</string>
+    <string name="security_share_subject">Laporan Postur Keamanan</string>
+    <string name="security_app_scanner_desc">Pindai aplikasi untuk kombinasi izin berbahaya</string>
+    <string name="app_scan_filter_all">Semua(%1$d)</string>
+    <string name="app_scan_filter_dangerous">%1$d Berbahaya</string>
+    <string name="app_scan_filter_suspicious">%1$d Mencurigakan</string>
+    <string name="app_scan_risk_score">Risiko: %1$d</string>
+    <string name="app_scan_unknown_vendor">Vendor Tidak Dikenal</string>
+    <string name="app_scan_uninstall">UNINSTALL</string>
+    <string name="app_scan_scanning">Memindai aplikasi...</string>
+    <string name="app_scan_start_desc">Pindai aplikasi yang terinstal untuk mengidentifikasi kombinasi izin berbahaya dan potensi risiko privasi.</string>
+    <string name="app_scan_btn_start">MULAI SCAN</string>
+    <string name="app_scan_empty">Tidak ada aplikasi mencurigakan ditemukan.</string>
+    <string name="app_scan_risk_pinjol">Suspek Pinjol (Risiko Tinggi)</string>
+    <string name="app_scan_risk_privacy">Risiko Privasi</string>
+    <string name="app_scan_suspicious_comb">Kombinasi izin mencurigakan (SMS + Kontak + Audio)</string>
+    <string name="app_scan_camera_location">Akses Kamera &amp; Lokasi secara bersamaan</string>
+    <string name="app_scan_sensitive_access">Akses data sensitif</string>
+    <string name="app_scan_system_sms">Aplikasi utilitas sistem meminta izin SMS</string>
+    <string name="app_scan_trusted_system">Aplikasi sistem terpercaya</string>
+    <string name="app_scan_system_app">Aplikasi sistem</string>
+    <string name="app_scan_hidden_banner">%1$d aplikasi sistem tersembunyi - Ketuk untuk tampilkan</string>
+    <string name="app_scan_disable_system">Nonaktifkan (Aplikasi Sistem)</string>
+    <string name="app_scan_info_error">Gagal membuka pengaturan aplikasi</string>
+    <string name="app_scan_app_info">INFO APLIKASI</string>
+    <string name="app_scan_results_copied">Hasil berhasil disalin</string>
+    <string name="app_scan_share_subject">Pemindaian Keamanan Izin Aplikasi</string>
+    <string name="app_scan_report_header">Laporan Pemindai Izin Aplikasi</string>
 
-    <!-- Diagnostic Tab -->
-    <string name="diag_ping">Tes Ping</string>
-    <string name="diag_traceroute">Traceroute</string>
-    <string name="diag_speedtest">Tes Kecepatan</string>
-    <string name="diag_dns">Pencarian DNS</string>
-    <string name="diag_http_check">Cek HTTP</string>
-    <string name="diag_ssl_checker">Pemeriksa SSL/TLS</string>
-    <string name="diag_blacklist">Cek Blacklist</string>
-    <string name="blacklist_check_desc">Cek apakah IP terdaftar di DNSBL utama</string>
-    <string name="blacklist_btn_check_my_ip">Cek IP Saya</string>
-    <string name="blacklist_btn_check">CEK</string>
-    <string name="blacklist_status_listed">TERDAFTAR</string>
-    <string name="blacklist_status_clean">BERSIH</string>
-    <string name="blacklist_summary">%1$d Terdaftar, %2$d Bersih</string>
-    <string name="blacklist_invalid_ip">Alamat IP tidak valid</string>
-    <string name="blacklist_private_ip">IP Privat tidak dapat dicek</string>
+    <!-- WiFi Security Audit -->
+    <string name="security_wifi_audit_title">Audit Keamanan WiFi</string>
+    <string name="security_wifi_audit_desc">Cek enkripsi, WPS, DNS, dan keamanan password</string>
+    <string name="wifi_audit_status_not_scanned">Belum di-scan</string>
+    <string name="wifi_audit_status_issues">%1$d masalah ditemukan</string>
+    <string name="wifi_audit_status_critical">%1$d Kritis! 🔴</string>
+    <string name="wifi_audit_scan">SCAN</string>
+    <string name="wifi_audit_scan_lan">SCAN LAN</string>
+    <string name="wifi_audit_risk_score">Skor Risiko: %1$d/100</string>
+    <string name="wifi_audit_safe">AMAN</string>
+    <string name="wifi_audit_suspicious">MENCURIGAKAN</string>
+    <string name="wifi_audit_critical_label">KRITIS</string>
+    <string name="wifi_audit_encryption">Enkripsi</string>
+    <string name="wifi_audit_wps">WPS (WiFi Protected Setup)</string>
+    <string name="wifi_audit_ssid_pass">SSID &amp; Password</string>
+    <string name="wifi_audit_dns">Keamanan DNS</string>
+    <string name="wifi_audit_gateway">Router Gateway %1$s</string>
+    <string name="wifi_audit_channel">Saluran %1$d (%2$s)</string>
+    <string name="wifi_audit_hidden">SSID Tersembunyi</string>
+    <string name="wifi_audit_pmf">Perlindungan PMF</string>
+    <string name="wifi_audit_network_type">Tipe Jaringan</string>
+    <string name="wifi_audit_devices">Perangkat di Jaringan</string>
+    <string name="wifi_audit_how_to_fix">Cara Memperbaiki</string>
+    <string name="wifi_audit_copy_report">Salin Laporan</string>
+    <string name="wifi_audit_share">Bagikan</string>
+    <string name="wifi_audit_fix_steps">Langkah Perbaikan</string>
+    <string name="wifi_audit_confetti">WiFi Anda sekarang aman! 🎉</string>
+    <string name="wifi_audit_rec">Rekomendasi:</string>
+    <string name="wifi_audit_grade_excellent">SANGAT BAIK</string>
+    <string name="wifi_audit_grade_good">BAIK</string>
+    <string name="wifi_audit_grade_fair">CUKUP</string>
+    <string name="wifi_audit_grade_weak">LEMAH</string>
+    <string name="wifi_audit_grade_critical">KRITIS</string>
+    <string name="wifi_audit_grade_excellent_desc">Koneksi WiFi memiliki konfigurasi keamanan yang kuat.</string>
+    <string name="wifi_audit_grade_good_desc">Koneksi relatif aman dengan beberapa rekomendasi.</string>
+    <string name="wifi_audit_grade_fair_desc">Ditemukan beberapa kelemahan keamanan.</string>
+    <string name="wifi_audit_grade_weak_desc">Koneksi memiliki risiko keamanan yang signifikan.</string>
+    <string name="wifi_audit_grade_critical_desc">Koneksi menggunakan konfigurasi yang sangat lemah.</string>
 
-    <!-- Scanner Tab -->
-    <string name="scan_lan">Pemindai LAN</string>
-    <string name="scan_port">Pemindai Port</string>
-    <string name="scan_wifi">Penganalisis WiFi</string>
-    <string name="scan_bluetooth">Pemindai Bluetooth</string>
-    <string name="scan_mdns">Pemindai mDNS</string>
-    <string name="scan_channel_graph">Grafik Saluran</string>
-    <string name="scan_upnp">Pemindai UPnP</string>
-    <string name="scan_snmp">Pemindai SNMP</string>
-    <string name="wifi_detail">Detail WiFi</string>
-    <string name="cellular_detail">Detail Seluler</string>
+    <string name="wifi_audit_cat_encryption">Enkripsi &amp; Autentikasi</string>
+    <string name="wifi_audit_cat_config">Konfigurasi WiFi</string>
+    <string name="wifi_audit_cat_trust">Kepercayaan Access Point</string>
+    <string name="wifi_audit_cat_network">Keamanan Jaringan</string>
+    <string name="wifi_audit_cat_privacy">Privasi</string>
+    <string name="wifi_audit_cat_exposure">Eksposur Jaringan</string>
 
-    <!-- Utilities Tab -->
-    <string name="util_ip_calc">Kalkulator IP</string>
-    <string name="util_whois">Whois &amp; Info IP</string>
-    <string name="util_http">Header HTTP</string>
-    <string name="util_http_lab">Penguji API / HTTP Lab</string>
-    <string name="util_wol">Bangunkan LAN (WoL)</string>
-    <string name="util_quick_notes">Catatan Cepat / Buku IP</string>
-    <string name="util_eng_tools">Alat Engineer</string>
+    <string name="wifi_audit_checklist_title">Checklist WiFi Aman</string>
+    <string name="wifi_audit_checklist_wpa23">WPA2/WPA3 aktif</string>
+    <string name="wifi_audit_checklist_wpa3_avail">WPA3 tersedia – pertimbangkan upgrade</string>
+    <string name="wifi_audit_checklist_wps_off">WPS nonaktif</string>
+    <string name="wifi_audit_checklist_strong_pass">Password WiFi unik dan kuat</string>
+    <string name="wifi_audit_checklist_admin_pass">Password admin router diganti</string>
+    <string name="wifi_audit_checklist_https_mgmt">Manajemen router HTTPS aktif</string>
+    <string name="wifi_audit_checklist_telnet_off">Telnet nonaktif</string>
+    <string name="wifi_audit_checklist_firmware">Firmware terupdate</string>
+    <string name="wifi_audit_checklist_guest">Jaringan tamu aktif untuk perangkat tak dikenal</string>
+    <string name="wifi_audit_checklist_isolation">Isolasi klien aktif jika sesuai</string>
 
-    <!-- Quick Notes -->
-    <string name="notes_search_hint">Cari judul, catatan, atau tag...</string>
-    <string name="notes_empty">Tidak ada catatan</string>
-    <string name="notes_add_title">Tambah Catatan</string>
-    <string name="notes_edit_title">Edit Catatan</string>
-    <string name="notes_field_title">Judul (IP/Domain/Label)</string>
-    <string name="notes_field_note">Catatan / Deskripsi</string>
-    <string name="notes_field_tag">Tag (misal: Router, Server)</string>
-    <string name="notes_pin">Sematkan ke atas</string>
-    <string name="notes_action_copy">SALIN</string>
-    <string name="notes_action_ping">PING</string>
-    <string name="notes_action_test_api">TEST API</string>
-    <string name="notes_import">Impor JSON</string>
-    <string name="notes_export">Ekspor JSON</string>
-    <string name="notes_delete_confirm">Hapus catatan ini?</string>
+    <string name="wifi_audit_why_it_matters">Mengapa ini penting</string>
+    <string name="wifi_audit_why_it_matters_desc">Parameter ini krusial untuk memastikan keamanan koneksi WiFi Anda dari potensi penyadapan atau akses tidak sah.</string>
+    <string name="wifi_audit_rogue_ap">Rogue Access Point</string>
+    <string name="wifi_audit_private_dns">Private DNS</string>
+    <string name="wifi_audit_mac_privacy">Privasi MAC</string>
+    <string name="wifi_audit_unknown_wifi">WiFi Tidak Dikenal</string>
+    <string name="wifi_audit_bssid_label">BSSID: %1$s</string>
+    <string name="wifi_audit_gtw_label">GTW: %1$s</string>
+    <string name="wifi_audit_ch_label">Ch %1$d</string>
+    <string name="wifi_audit_score_title">Skor Keamanan WiFi</string>
+    <string name="wifi_audit_verified_count">%1$d / %2$d terverifikasi</string>
+    <string name="wifi_audit_report_copied">Laporan Berhasil Disalin</string>
+    <string name="wifi_audit_router_fail">Gagal membuka router</string>
+    <string name="wifi_audit_details_header">DETAIL AUDIT</string>
+    <string name="wifi_audit_duration_label">Durasi Audit: %1$dms</string>
+    <string name="wifi_audit_report_title">Audit Keamanan WiFi – Netez</string>
+    <string name="wifi_audit_report_ssid">SSID: %1$s</string>
+    <string name="wifi_audit_report_security">Keamanan: %1$s</string>
+    <string name="wifi_audit_report_frequency">Frekuensi: %1$d MHz</string>
+    <string name="wifi_audit_report_channel">Saluran: %1$d</string>
+    <string name="wifi_audit_report_score">Skor Keamanan: %1$d/100</string>
+    <string name="wifi_audit_report_grade">Grade: %1$s</string>
+    <string name="wifi_audit_report_critical">Kritis: %1$d</string>
+    <string name="wifi_audit_report_warning">Peringatan: %1$d</string>
+    <string name="wifi_audit_report_findings">Temuan:</string>
+    <string name="wifi_audit_report_recommendations">Rekomendasi:</string>
+    <string name="wifi_audit_not_verifiable">Tidak dapat diverifikasi</string>
+    <string name="wifi_audit_unknown_desc">Tidak dapat diverifikasi oleh Android pada perangkat ini.</string>
 
-    <!-- Engineer Tools -->
-    <string name="eng_ssh">SSH Client</string>
-    <string name="eng_telnet">Telnet Client</string>
-    <string name="eng_sftp">SFTP Client</string>
-    <string name="eng_tftp">TFTP Client</string>
-    <string name="eng_terminal">Terminal</string>
-    <string name="eng_save_session">Simpan Sesi</string>
-    <string name="eng_key_auth">Otentikasi Key</string>
+    <!-- WiFi Audit Engine Strings -->
+    <string name="wifi_audit_enc_wpa3_detail">WPA3 terdeteksi (Modern &amp; Aman).</string>
+    <string name="wifi_audit_enc_wpa2_aes_detail">WPA2 dengan enkripsi modern (CCMP/AES).</string>
+    <string name="wifi_audit_enc_wpa2_aes_rec">Pertimbangkan upgrade ke WPA3 jika router mendukung.</string>
+    <string name="wifi_audit_enc_wpa2_tkip_detail">WPA2 menggunakan TKIP yang kurang aman.</string>
+    <string name="wifi_audit_enc_wpa2_tkip_rec">Ubah konfigurasi router ke AES/CCMP.</string>
+    <string name="wifi_audit_enc_wep_detail">Protokol WEP yang sangat lemah terdeteksi.</string>
+    <string name="wifi_audit_enc_wep_rec">Segera ganti ke WPA2 atau WPA3.</string>
+    <string name="wifi_audit_enc_open_detail">Jaringan terbuka tanpa enkripsi.</string>
+    <string name="wifi_audit_enc_open_rec">Gunakan VPN dan aktifkan enkripsi pada router.</string>
+    <string name="wifi_audit_enc_unknown_detail">Tidak dapat memverifikasi enkripsi.</string>
+
+    <string name="wifi_audit_wps_on_detail">WPS terdeteksi aktif.</string>
+    <string name="wifi_audit_wps_off_detail">WPS tidak terdeteksi.</string>
+    <string name="wifi_audit_wps_on_rec">Nonaktifkan WPS jika tidak diperlukan.</string>
+
+    <string name="wifi_audit_pmf_on_detail">Protected Management Frames didukung.</string>
+    <string name="wifi_audit_pmf_off_detail">PMF tidak dapat diverifikasi.</string>
+    <string name="wifi_audit_pmf_off_rec">Aktifkan PMF jika didukung router.</string>
+
+    <string name="wifi_audit_ssid_default_detail">SSID terlihat menggunakan pola default.</string>
+    <string name="wifi_audit_ssid_custom_detail">SSID unik digunakan.</string>
+    <string name="wifi_audit_ssid_default_rec">Pastikan password WiFi telah diganti dari default vendor.</string>
+
+    <string name="wifi_audit_rogue_ap_warn_detail">Potensi Rogue AP: Ditemukan SSID sama dengan enkripsi berbeda.</string>
+    <string name="wifi_audit_rogue_ap_safe_detail">Tidak ada anomali AP terdeteksi.</string>
+    <string name="wifi_audit_rogue_ap_warn_rec">Waspada potensi Evil Twin attack.</string>
+
+    <string name="wifi_audit_gtw_detail">Gateway: %1$s. Port terbuka: %2$s</string>
+    <string name="wifi_audit_gtw_telnet_rec">Matikan layanan Telnet pada router.</string>
+    <string name="wifi_audit_gtw_http_rec">Gunakan HTTPS untuk manajemen router.</string>
+
+    <!-- General -->
+    <string name="btn_cancel">Batal</string>
+    <string name="btn_add">Tambah</string>
+    <string name="btn_save">Simpan</string>
+    <string name="btn_close">Tutup</string>
+    <string name="btn_ok">OK</string>
+
+    <!-- Settings Screen New -->
+    <string name="set_security">Keamanan</string>
+    <string name="set_bio_auth">Autentikasi Biometrik</string>
+    <string name="set_bio_auth_desc">Gunakan Sidik Jari/Wajah untuk Password Manager</string>
+    <string name="set_pin_title">Atur/Ubah PIN</string>
+    <string name="set_pin_not_set">Belum Diatur</string>
+    <string name="set_pin_active">PIN Aktif</string>
+    <string name="set_autolock">Kunci Otomatis 30s</string>
+    <string name="set_autolock_desc">Kunci otomatis setelah 30 detik di latar belakang</string>
+    <string name="set_clip_clear">Hapus Clipboard 30s</string>
+    <string name="set_clip_clear_desc">Hapus otomatis password dari clipboard</string>
 </resources>

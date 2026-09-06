@@ -1,39 +1,16 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
+<vector xmlns:android="http://android.com"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
 
-    <group
-        android:scaleX="0.65"
-        android:scaleY="0.65"
-        android:translateX="19"
-        android:translateY="19">
+    <!-- Background shape or bounding box optional -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" />
 
-        <!-- Kiri -->
-        <path
-            android:fillColor="#0E90B8"
-            android:pathData="M23,80 L40,38 L58,38 L41,80 Z" />
-
-        <!-- Tengah -->
-        <path
-            android:fillColor="#0E90B8"
-            android:pathData="M58,38 L65,38 L72,55 L65,72 L58,72 L52,55 Z" />
-
-        <!-- Lipatan -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M58,38 C61,38 61,38 62,39
-                              L54,55
-                              L62,71
-                              C61,72 61,72 58,72
-                              L50,55 Z" />
-
-        <!-- Kanan -->
-        <path
-            android:fillColor="#0E90B8"
-            android:pathData="M65,72 L83,29 L100,29 L82,72 Z" />
-
-    </group>
-
+    <!-- Letter 'N' Path -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6,17V7h2.1l3.8,5.7L15.9,7H18v10h-2V10.3l-3.1,4.7h-1.8L8,10.3V17H6z" />
 </vector>

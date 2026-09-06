@@ -1,110 +1,289 @@
 package com.herwin.netez.ui.screens
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
+import android.view.ViewGroup
 import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
+import com.herwin.netez.network.HttpCheckResult
+import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.theme.PremiumNavy
+import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.HttpCheckViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HttpCheckScreen(viewModel: HttpCheckViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    
+    // Manage local TextFieldValue for cursor control
+    var urlValue by remember { mutableStateOf(TextFieldValue(uiState.url)) }
+    
+    // Sync with ViewModel url changes (e.g. suggestions)
+    LaunchedEffect(uiState.url) {
+        if (uiState.url != urlValue.text) {
+            urlValue = TextFieldValue(
+                text = uiState.url,
+                selection = TextRange(uiState.url.length)
+            )
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(PremiumNavy)
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
     ) {
-        // Search Input
+        // 1. Pro Input Card
         item {
             Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp
+                shape = RoundedCornerShape(16.dp),
+                color = SoftDarkBg,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     OutlinedTextField(
-                        value = uiState.url,
-                        onValueChange = { viewModel.updateUrl(it) },
-                        placeholder = { Text("google.com", color = TextGray) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true
+                        value = urlValue,
+                        onValueChange = { 
+                            urlValue = it
+                            viewModel.updateUrl(it.text) 
+                        },
+                        leadingIcon = { 
+                            Icon(
+                                painter = AppIcons.lock(), 
+                                contentDescription = null, 
+                                tint = Color(0xFF22C55E), 
+                                modifier = Modifier.size(16.dp)
+                            ) 
+                        },
+                        placeholder = { Text("https://google.com", color = TextGray.copy(alpha = 0.5f), fontSize = 15.sp) },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(fontSize = 15.sp, color = Color.White),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { viewModel.runCheck() }),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = Color(0xFF2A2E45),
+                            focusedContainerColor = Color(0xFF2A2E45),
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color(0xFF6C8CFF),
+                            unfocusedTextColor = Color.White,
+                            focusedTextColor = Color.White
+                        )
                     )
-                    Button(
-                        onClick = { viewModel.runCheck() },
-                        modifier = Modifier.height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        enabled = !uiState.isLoading
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(48.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        } else {
-                            Text("CHECK", fontWeight = FontWeight.ExtraBold)
+                        var methodExpanded by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.weight(0.35f)) {
+                            Surface(
+                                onClick = { methodExpanded = true },
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF2A2E45)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(uiState.method, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Icon(AppIcons.arrowDropDown(), null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = methodExpanded,
+                                onDismissRequest = { methodExpanded = false },
+                                modifier = Modifier.background(Color(0xFF2A2E45))
+                            ) {
+                                listOf("GET", "HEAD").forEach { m ->
+                                    DropdownMenuItem(
+                                        text = { Text(m, color = Color.White) },
+                                        onClick = { viewModel.updateMethod(m); methodExpanded = false }
+                                    )
+                                }
+                            }
+                        }
+
+                        Button(
+                            onClick = { viewModel.runCheck() },
+                            modifier = Modifier.weight(0.65f).fillMaxHeight(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF)),
+                            enabled = !uiState.isLoading,
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(AppIcons.search(), null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "CHECK", 
+                                        fontWeight = FontWeight.Bold, 
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Result Premium Card
+        // 2. Pro Status Card
         uiState.result?.let { res ->
             item {
-                PremiumResultCard(res)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Result", style = MaterialTheme.typography.titleSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                    Row {
+                        IconButton(onClick = { 
+                            viewModel.copyToClipboard()
+                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(AppIcons.contentCopy(), contentDescription = "Copy Results", tint = Color(0xFF6C8CFF))
+                        }
+                        IconButton(onClick = { 
+                            viewModel.shareResults(context)
+                        }) {
+                            Icon(AppIcons.share(), contentDescription = "Share Results", tint = Color(0xFF6C8CFF))
+                        }
+                    }
+                }
             }
-        }
-
-        // History Chart (Response Time)
-        if (uiState.history.isNotEmpty()) {
             item {
-                Text("Response History (Last 7)", style = MaterialTheme.typography.labelLarge, color = TextGray)
-                Spacer(Modifier.height(8.dp))
-                ResponseHistoryChart(uiState.history)
+                HttpStatusProCard(res)
             }
         }
 
-        // Recent Checks List
+        // 3. Response History Chart
+        if (uiState.history.size >= 2) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF1E2235).copy(alpha = 0.5f)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Response History", style = MaterialTheme.typography.labelSmall, color = TextGray, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        Box(modifier = Modifier.fillMaxWidth().height(80.dp)) {
+                            HistoryLineChart(uiState.history)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Expandable Sections
+        uiState.result?.let { res ->
+            item {
+                ExpandableHttpSection(
+                    title = "Response Headers (${res.headers.size})",
+                    isExpanded = uiState.isHeadersExpanded,
+                    onToggle = { viewModel.toggleHeaders() }
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        res.headers.forEach { (k, v) ->
+                            HeaderItem(k, v)
+                        }
+                    }
+                }
+            }
+            
+            if (res.hasSsl) {
+                item {
+                    ExpandableHttpSection(
+                        title = "SSL Certificate",
+                        isExpanded = uiState.isSslExpanded,
+                        onToggle = { viewModel.toggleSsl() }
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SslDetailItem("Subject", res.sslSubject ?: "Unknown")
+                            SslDetailItem("Issuer", res.sslIssuer ?: "Unknown")
+                            SslDetailItem("Expiry", "${res.sslExpiryDays ?: 0} days remaining")
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Quick Suggestions
         item {
-            Text("Quick Suggestions", style = MaterialTheme.typography.labelLarge, color = TextGray)
+            Text("Quick Suggestions", style = MaterialTheme.typography.labelSmall, color = TextGray, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            FlowRowComponent(
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            FlowRowComponent(modifier = Modifier.fillMaxWidth()) {
                 uiState.recentHosts.forEach { host ->
-                    SuggestionChip(
+                    Surface(
                         onClick = { viewModel.updateUrl(host); viewModel.runCheck() },
-                        label = { Text(host) },
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White.copy(alpha = 0.05f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = "https://www.google.com/s2/favicons?domain=$host&sz=32",
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp).clip(CircleShape)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(host, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
                 }
             }
         }
@@ -112,120 +291,165 @@ fun HttpCheckScreen(viewModel: HttpCheckViewModel = viewModel()) {
 }
 
 @Composable
-fun PremiumResultCard(res: com.herwin.netez.network.HttpCheckResult) {
-    val statusColor = if (res.isAvailable) Color(0xFF10B981) else Color(0xFFEF4444)
-    
+fun HttpStatusProCard(res: HttpCheckResult) {
+    val isOnline = res.isAvailable
+    val bandColor = if (isOnline) Color(0xFF1A2E22) else Color(0xFF2E1A1A)
+    val statusColor = if (isOnline) Color(0xFF22C55E) else Color(0xFFEF4444)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xFF1E2235),
         tonalElevation = 4.dp
     ) {
         Column {
-            // Top: Status Header
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(statusColor.copy(alpha = 0.1f))
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxWidth().background(bandColor).padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        if (res.isAvailable) Icons.Default.Lock else Icons.Default.LockOpen,
-                        contentDescription = null,
-                        tint = statusColor,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Icon(if (isOnline) AppIcons.lock() else AppIcons.lockOpen(), null, tint = statusColor, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (res.isAvailable) "ONLINE" else "OFFLINE",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = statusColor,
-                        letterSpacing = 2.sp
-                    )
+                    Text(if (isOnline) "ONLINE" else "OFFLINE", color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
             }
 
-            Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                // Center: Host with Favicon
+            Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AsyncImage(
-                        model = "https://www.google.com/s2/favicons?sz=64&domain=${res.url}",
+                        model = "https://www.google.com/s2/favicons?domain=${res.url}&sz=64",
                         contentDescription = null,
                         modifier = Modifier.size(32.dp).clip(CircleShape)
                     )
                     Spacer(Modifier.width(16.dp))
-                    Text(
-                        text = res.url,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Text(res.url.removePrefix("https://").removePrefix("http://"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(20.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                Spacer(Modifier.height(16.dp))
 
-                // Bottom: Grid Metrics
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    MetricItem("Status", if (res.statusCode == -1) "ERROR" else res.statusCode.toString(), statusColor)
-                    Box(modifier = Modifier.width(1.dp).height(40.dp).background(TextGray.copy(alpha = 0.2f)))
-                    MetricItem("Response", "${res.responseTime} ms", MaterialTheme.colorScheme.primary)
-                    Box(modifier = Modifier.width(1.dp).height(40.dp).background(TextGray.copy(alpha = 0.2f)))
-                    MetricItem("Server IP", res.ipAddress.ifEmpty { "Unknown" }, TextGray)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    MetricPro(Modifier.weight(1f), "Status", res.statusCode.toString(), statusColor)
+                    MetricPro(Modifier.weight(1f), "Response", "${res.responseTime}ms", Color(0xFF6C8CFF))
+                    MetricPro(Modifier.weight(1.5f), "Server IP", res.ipAddress, TextGray)
+                }
+
+                Spacer(Modifier.height(20.dp))
+                Text("Timings", fontSize = 11.sp, color = TextGray, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TimingChip("DNS", if (res.dnsTime > 0) "${res.dnsTime}ms" else "cached")
+                    TimingChip("Connect", if (res.connectTime > 0) "${res.connectTime}ms" else "-")
+                    TimingChip("TLS", if (res.tlsTime > 0) "${res.tlsTime}ms" else "-")
+                    TimingChip("TTFB", if (res.ttfbTime > 0) "${res.ttfbTime}ms" else "-")
                 }
             }
-
-            // Progress bar indicator for response time
-            val progress = (res.responseTime.toFloat() / 1000f).coerceIn(0f, 1f)
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(4.dp),
-                color = statusColor,
-                trackColor = Color.Transparent
-            )
         }
     }
 }
 
 @Composable
-fun MetricItem(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = TextGray)
-        Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.ExtraBold, color = color)
+fun MetricPro(modifier: Modifier = Modifier, label: String, value: String, valueColor: Color) {
+    Column(modifier = modifier) {
+        Text(label, fontSize = 10.sp, color = TextGray)
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = valueColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
 @Composable
-fun ResponseHistoryChart(history: List<com.herwin.netez.network.HttpCheckResult>) {
+fun TimingChip(label: String, value: String) {
     Surface(
-        modifier = Modifier.fillMaxWidth().height(100.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
+        color = Color(0xFF2A2E45),
+        shape = RoundedCornerShape(8.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            val maxTime = (history.maxOfOrNull { it.responseTime } ?: 100).coerceAtLeast(1)
-            history.reversed().forEach { res ->
-                val heightFactor = (res.responseTime.toFloat() / maxTime.toFloat()).coerceIn(0.1f, 1f)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(heightFactor)
-                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                        .background(if (res.isAvailable) Color(0xFF10B981) else Color(0xFFEF4444))
-                )
+        Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+            Text("$label ", fontSize = 10.sp, color = TextGray)
+            Text(value, fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun ExpandableHttpSection(title: String, isExpanded: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = SoftDarkBg,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+        onClick = onToggle
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Icon(if (isExpanded) AppIcons.expandLess() else AppIcons.expandMore(), null, tint = TextGray)
+            }
+            AnimatedVisibility(visible = isExpanded) {
+                content()
             }
         }
     }
+}
+
+@Composable
+fun HeaderItem(key: String, value: String) {
+    Column {
+        Text(key, color = Color(0xFF6C8CFF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = Color.White, fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun SslDetailItem(label: String, value: String) {
+    Row {
+        Text("$label: ", color = TextGray, fontSize = 12.sp)
+        Text(value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun HistoryLineChart(history: List<HttpCheckResult>) {
+    val context = LocalContext.current
+    val data = history.reversed()
+    
+    AndroidView(
+        factory = { ctx ->
+            LineChart(ctx).apply {
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                description.isEnabled = false
+                legend.isEnabled = false
+                setTouchEnabled(true)
+                axisRight.isEnabled = false
+                axisLeft.isEnabled = false
+                xAxis.isEnabled = false
+                setDrawGridBackground(false)
+                setDrawBorders(false)
+            }
+        },
+        update = { chart ->
+            val entries = data.mapIndexed { i, res -> Entry(i.toFloat(), res.responseTime.toFloat()) }
+            val dataSet = LineDataSet(entries, "ResponseTime").apply {
+                color = android.graphics.Color.parseColor("#22C55E")
+                lineWidth = 2f
+                setDrawValues(false)
+                setDrawCircles(true)
+                mode = LineDataSet.Mode.CUBIC_BEZIER
+            }
+            chart.data = LineData(dataSet)
+            chart.invalidate()
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -234,7 +458,7 @@ fun FlowRowComponent(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    androidx.compose.foundation.layout.FlowRow(
+    FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),

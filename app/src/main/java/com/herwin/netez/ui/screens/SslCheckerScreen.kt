@@ -9,15 +9,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +22,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.network.CertificateChainNode
 import com.herwin.netez.network.SslCertificateInfo
+import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.ResultRow
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
@@ -37,65 +36,112 @@ fun SslCheckerScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("SSL/TLS Checker", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                actions = {
-                    if (viewModel.result != null) {
-                        IconButton(onClick = { copySslToClipboard(context, viewModel.result!!) }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.White)
-                        }
-                        IconButton(onClick = { shareSslResult(context, viewModel.result!!) }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PremiumNavy)
-            )
-        },
-        containerColor = PremiumNavy
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PremiumNavy)
+            .padding(16.dp)
+    ) {
+        // Input Section
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = SoftDarkBg,
+            tonalElevation = 2.dp
         ) {
-            OutlinedTextField(
-                value = viewModel.target,
-                onValueChange = { viewModel.target = it },
-                label = { Text("Host (e.g. google.com:443)", color = TextGray) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedTextColor = Color.White,
-                    focusedTextColor = Color.White,
-                    cursorColor = Color.White,
-                    focusedBorderColor = Color(0xFF4F46E5),
-                    unfocusedBorderColor = SoftDarkBg
-                ),
-                trailingIcon = {
-                    IconButton(onClick = { viewModel.checkSsl() }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = viewModel.target,
+                    onValueChange = { viewModel.target = it },
+                    placeholder = { Text("google.com:443", color = TextGray) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedTextColor = Color.White,
+                        focusedTextColor = Color.White,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                        focusedBorderColor = Color(0xFF6C8CFF)
+                    ),
+                    singleLine = true
+                )
+                Button(
+                    onClick = { viewModel.checkSsl() },
+                    modifier = Modifier.height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF)),
+                    enabled = !viewModel.isLoading
+                ) {
+                    if (viewModel.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Icon(AppIcons.search(), null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("CHECK", fontWeight = FontWeight.ExtraBold)
                     }
                 }
-            )
+            }
+        }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (viewModel.error != null) {
+            Surface(
+                color = Color.Red.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(viewModel.error!!, color = Color.Red, modifier = Modifier.padding(16.dp), fontSize = 14.sp)
+            }
+        } else if (viewModel.result != null) {
+            SslResultHeader(viewModel, context)
             Spacer(modifier = Modifier.height(16.dp))
+            SslResultContent(viewModel.result!!)
+        } else if (!viewModel.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Enter a host to check SSL/TLS certificate", color = TextGray)
+            }
+        }
+        
+        if (viewModel.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFF6C8CFF))
+            }
+        }
+    }
+}
 
-            if (viewModel.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF4F46E5))
-                }
-            } else if (viewModel.error != null) {
-                Text(viewModel.error!!, color = Color.Red, modifier = Modifier.padding(8.dp))
-            } else if (viewModel.result != null) {
-                SslResultContent(viewModel.result!!)
+@Composable
+fun SslResultHeader(viewModel: SslCheckerViewModel, context: Context) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "Certificate Result",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+        Row {
+            IconButton(onClick = {
+                viewModel.copyToClipboard()
+                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            }) {
+                Icon(AppIcons.contentCopy(), null, tint = Color(0xFF6C8CFF))
+            }
+            IconButton(onClick = {
+                viewModel.shareResults(context)
+            }) {
+                Icon(AppIcons.share(), null, tint = Color(0xFF6C8CFF))
             }
         }
     }
@@ -105,7 +151,8 @@ fun SslCheckerScreen(
 fun SslResultContent(result: SslCertificateInfo) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
             HeaderSection(result)
@@ -121,13 +168,6 @@ fun SslResultContent(result: SslCertificateInfo) {
         }
         item {
             ChainCard(result.chain)
-        }
-        item {
-            val context = LocalContext.current
-            com.herwin.netez.ui.components.ResultFooter(
-                fullTextToCopy = formatSslResult(result),
-                onCopyAll = { copySslToClipboard(context, result) }
-            )
         }
     }
 }
@@ -174,17 +214,16 @@ private fun TimelineCard(result: SslCertificateInfo) {
             Text("Validity Timeline", color = Color.White, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
             
-            // Simplified timeline view
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TimelineItem("Issued", result.issuedDate, Icons.Default.CheckCircle, Color(0xFF10B981))
-                TimelineItem("Expires", result.expiryDate, Icons.Default.Event, Color(0xFFF59E0B))
+                TimelineItem("Issued", result.issuedDate, AppIcons.checkCircle(), Color(0xFF10B981))
+                TimelineItem("Expires", result.expiryDate, AppIcons.event(), Color(0xFFF59E0B))
             }
         }
     }
 }
 
 @Composable
-private fun TimelineItem(label: String, date: String, icon: ImageVector, color: Color) {
+private fun TimelineItem(label: String, date: String, icon: Painter, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(8.dp))
@@ -237,63 +276,16 @@ private fun DetailsGrid(result: SslCertificateInfo) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Certificate Details", color = Color.White, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
-            com.herwin.netez.ui.components.ResultRow("Subject", result.subject)
-            com.herwin.netez.ui.components.ResultRow("Issuer", result.issuer)
-            com.herwin.netez.ui.components.ResultRow("Algorithm", result.signatureAlgorithm)
-            com.herwin.netez.ui.components.ResultRow("Public Key", result.publicKeyInfo)
-            com.herwin.netez.ui.components.ResultRow("Serial No", result.serialNumber)
+            ResultRow("Subject", result.subject)
+            ResultRow("Issuer", result.issuer)
+            ResultRow("Algorithm", result.signatureAlgorithm)
+            ResultRow("Public Key", result.publicKeyInfo)
+            ResultRow("Serial No", result.serialNumber)
             if (result.san.isNotEmpty()) {
-                com.herwin.netez.ui.components.ResultRow("SAN", result.san.joinToString(", "))
+                ResultRow("SAN", result.san.joinToString(", "))
             }
         }
     }
-}
-
-private fun copySslToClipboard(context: Context, result: SslCertificateInfo) {
-    val text = formatSslResult(result)
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("SSL Certificate Info", text)
-    clipboard.setPrimaryClip(clip)
-    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-}
-
-private fun shareSslResult(context: Context, result: SslCertificateInfo) {
-    val text = formatSslResult(result)
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, "SSL Certificate Info - ${result.host}")
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    context.startActivity(Intent.createChooser(intent, "Share Result"))
-}
-
-private fun formatSslResult(result: SslCertificateInfo): String {
-    return """
-        SSL/TLS Certificate Checker Result
-        ----------------------------------
-        Domain: ${result.host}
-        Status: ${if (result.isValid) "VALID" else "EXPIRED/INVALID"}
-        Days Remaining: ${result.expiryDays}
-        
-        Timeline:
-        - Issued: ${result.issuedDate}
-        - Expires: ${result.expiryDate}
-        
-        Security:
-        - Protocol: ${result.protocol}
-        - Cipher: ${result.cipherSuite}
-        - HSTS: ${if (result.hstsEnabled == true) "Enabled" else "Disabled"}
-        
-        Details:
-        - Subject: ${result.subject}
-        - Issuer: ${result.issuer}
-        - Algorithm: ${result.signatureAlgorithm}
-        - Public Key: ${result.publicKeyInfo}
-        - Serial No: ${result.serialNumber}
-        ${if (result.san.isNotEmpty()) "- SAN: ${result.san.joinToString(", ")}" else ""}
-        
-        Generated by NeTez App
-    """.trimIndent()
 }
 
 @Composable
@@ -308,7 +300,7 @@ private fun ChainCard(chain: List<CertificateChainNode>) {
             chain.forEachIndexed { index, node ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        if (index == 0) Icons.Default.Lock else Icons.Default.Shield,
+                        if (index == 0) AppIcons.lock() else AppIcons.shield(),
                         contentDescription = null,
                         tint = if (node.isValid) Color(0xFF10B981) else Color(0xFFEF4444),
                         modifier = Modifier.size(20.dp)

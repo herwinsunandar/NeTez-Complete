@@ -40,22 +40,6 @@ fun HttpLabScreen(
     val tabs = listOf("Params", "Headers", "Body", "Auth")
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("API Tester / HTTP Lab", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* History dialog */ }) {
-                        Icon(Icons.Default.History, contentDescription = "History", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PremiumNavy)
-            )
-        },
         containerColor = PremiumNavy
     ) { padding ->
         Column(

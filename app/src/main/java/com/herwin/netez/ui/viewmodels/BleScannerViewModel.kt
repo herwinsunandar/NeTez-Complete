@@ -1,7 +1,14 @@
 package com.herwin.netez.ui.viewmodels
 
+import android.Manifest
 import android.app.Application
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.herwin.netez.network.BleDevice
@@ -19,16 +26,18 @@ enum class BleFilter {
 data class BleScannerState(
     val devices: List<BleDevice> = emptyList(),
     val isScanning: Boolean = false,
-    val filter: BleFilter = BleFilter.ALL,
+    val filter: BleFilter = BleFilter.NEARBY, // Default to Nearby
     val scanTimeMs: Long = 0,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val error: String? = null,
+    val showPermissionDialog: Boolean = false
 ) {
     val filteredDevices: List<BleDevice>
         get() = devices.filter { 
             val matchesFilter = when (filter) {
                 BleFilter.ALL -> true
                 BleFilter.PAIRED -> it.isPaired
-                BleFilter.NEARBY -> it.rssi > -70
+                BleFilter.NEARBY -> it.rssi > -75 // User requested -75
             }
             val matchesSearch = it.name.lowercase().contains(searchQuery.lowercase()) || it.mac.contains(searchQuery)
             matchesFilter && matchesSearch
@@ -62,13 +71,63 @@ class BleScannerViewModel(application: Application) : AndroidViewModel(applicati
         if (_uiState.value.isScanning) {
             stopScan()
         } else {
-            startScan()
+            if (checkPrerequisites()) {
+                startScan()
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun checkPrerequisites(): Boolean {
+        val context = getApplication<Application>()
+        
+        // 1. Check Bluetooth Enabled
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        if (adapter == null || !adapter.isEnabled) {
+            _uiState.value = _uiState.value.copy(error = "Aktifkan Bluetooth untuk scan")
+            return false
+        }
+
+        // 2. Check Permissions
+        val permissions = if (Build.VERSION.SDK_INT >= 31) {
+            listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        
+        val missing = permissions.any { 
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED 
+        }
+        
+        if (missing) {
+            _uiState.value = _uiState.value.copy(showPermissionDialog = true)
+            return false
+        }
+
+        // 3. Check Location Enabled (needed for BLE on some versions)
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            _uiState.value = _uiState.value.copy(error = "Aktifkan Lokasi/GPS untuk scan BLE name")
+            return false
+        }
+
+        _uiState.value = _uiState.value.copy(error = null)
+        return true
+    }
+
+    fun dismissPermissionDialog() {
+        _uiState.value = _uiState.value.copy(showPermissionDialog = false)
+    }
+
+    fun fetchName(mac: String) {
+        manager.fetchNameGatt(mac) { name: String? ->
+            // The manager updates via foundDevices flow. 
         }
     }
 
     fun pairDevice(nativeDevice: BluetoothDevice?) {
-        nativeDevice?.let {
-            manager.pairDevice(it)
+        nativeDevice?.let { device: BluetoothDevice ->
+            manager.pairDevice(device)
         }
     }
 

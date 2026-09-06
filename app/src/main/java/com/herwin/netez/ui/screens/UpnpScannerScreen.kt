@@ -1,8 +1,13 @@
 package com.herwin.netez.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,19 +16,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.network.UpnpDevice
+import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.ResultFooter
+import com.herwin.netez.ui.components.ResultRow
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
@@ -81,7 +88,7 @@ fun UpnpScannerScreen(
                     if (uiState.isScanning) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Icon(Icons.Default.Radar, null)
+                        Icon(AppIcons.radar(), null)
                         Spacer(Modifier.width(8.dp))
                         Text("SCAN", fontWeight = FontWeight.Bold)
                     }
@@ -109,13 +116,13 @@ fun UpnpScannerScreen(
 
             if (uiState.devices.isNotEmpty() && !uiState.isScanning) {
                 item {
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    com.herwin.netez.ui.components.ResultFooter(
+                    val context = LocalContext.current
+                    ResultFooter(
                         fullTextToCopy = uiState.devices.joinToString("\n") { "${it.friendlyName} (${it.ip})" },
                         onCopyAll = {
-                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("UPnP Devices", uiState.devices.joinToString("\n") { it.friendlyName }))
-                            android.widget.Toast.makeText(context, "Copied list", android.widget.Toast.LENGTH_SHORT).show()
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("UPnP Devices", uiState.devices.joinToString("\n") { it.friendlyName }))
+                            Toast.makeText(context, "Copied list", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -144,7 +151,7 @@ fun UpnpDeviceCard(device: UpnpDevice) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Router,
+                        painter = AppIcons.router(),
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
@@ -162,7 +169,7 @@ fun UpnpDeviceCard(device: UpnpDevice) {
                 }
 
                 Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    painter = if (expanded) AppIcons.keyboardArrowUp() else AppIcons.keyboardArrowDown(),
                     contentDescription = null,
                     tint = TextGray
                 )
@@ -175,17 +182,14 @@ fun UpnpDeviceCard(device: UpnpDevice) {
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                    
-                    com.herwin.netez.ui.components.ResultRow("Manufacturer", device.manufacturer.ifEmpty { "Unknown" })
-                    com.herwin.netez.ui.components.ResultRow("Location", device.location)
-                    com.herwin.netez.ui.components.ResultRow("Server", device.server)
-                    com.herwin.netez.ui.components.ResultRow("Search Target", device.searchTarget)
-                    com.herwin.netez.ui.components.ResultRow("USN", device.usn)
+
+                    ResultRow("Manufacturer", device.manufacturer.ifEmpty { "Unknown" })
+                    ResultRow("Location", device.location)
+                    ResultRow("Server", device.server)
+                    ResultRow("Search Target", device.searchTarget)
+                    ResultRow("USN", device.usn)
                 }
             }
         }
     }
 }
-
-
-private fun BorderStroke(width: androidx.compose.ui.unit.Dp, color: Color) = androidx.compose.foundation.BorderStroke(width, color)

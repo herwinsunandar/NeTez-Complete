@@ -20,6 +20,8 @@ enum class WifiBand {
 
 data class Recommendation(
     val bestChannel: Int,
+    val crowdedChannel: Int?,
+    val crowdedApCount: Int,
     val reason: String
 )
 
@@ -85,12 +87,15 @@ class ChannelGraphViewModel(application: Application) : AndroidViewModel(applica
 
     private fun calculateBestChannel(results: List<ScanResult>, band: WifiBand): Recommendation {
         val channelRange = when (band) {
-            WifiBand.BAND_2_4GHZ -> listOf(1, 6, 11) // Standard non-overlapping
+            WifiBand.BAND_2_4GHZ -> listOf(1, 6, 11)
             WifiBand.BAND_5GHZ -> listOf(36, 40, 44, 48, 149, 153, 157, 161)
-            WifiBand.BAND_6GHZ -> listOf(1, 5, 9, 13) // Simplified
+            WifiBand.BAND_6GHZ -> listOf(1, 5, 9, 13)
         }
 
-        if (results.isEmpty()) return Recommendation(channelRange.first(), "No interference detected")
+        val apByChan = results.groupBy { NetworkUtils.getChannel(it.frequency) }
+        val crowded = apByChan.maxByOrNull { it.value.size }
+
+        if (results.isEmpty()) return Recommendation(channelRange.first(), null, 0, "No interference detected")
 
         val channelScores = channelRange.associateWith { channel ->
             var overlapCount = 0
@@ -98,17 +103,16 @@ class ChannelGraphViewModel(application: Application) : AndroidViewModel(applica
             
             results.forEach { ap ->
                 val apChannel = NetworkUtils.getChannel(ap.frequency)
-                // Assume 20MHz spread for scoring
                 if (Math.abs(apChannel - channel) <= 2) {
                     overlapCount++
-                    totalRssi += ap.level + 100 // Normalize -100 to 0
+                    totalRssi += ap.level + 100
                 }
             }
             overlapCount * 100 + totalRssi
         }
 
         val best = channelScores.minByOrNull { it.value }?.key ?: channelRange.first()
-        return Recommendation(best, "Lowest interference found")
+        return Recommendation(best, crowded?.key, crowded?.value?.size ?: 0, "Lowest interference found")
     }
 
     override fun onCleared() {

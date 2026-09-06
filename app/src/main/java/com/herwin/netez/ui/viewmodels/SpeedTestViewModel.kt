@@ -7,6 +7,7 @@ import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.data.TestResult
 import com.herwin.netez.network.SpeedTestManager
 import com.herwin.netez.utils.NetworkUtils
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,7 +23,9 @@ data class SpeedTestState(
     val stage: SpeedTestStage = SpeedTestStage.IDLE,
     val selectedServer: String = "speed.cloudflare.com",
     val isp: String = "Detecting...",
-    val error: String? = null
+    val error: String? = null,
+    val downloadHistory: List<Float> = emptyList(),
+    val uploadHistory: List<Float> = emptyList()
 )
 
 enum class SpeedTestStage {
@@ -49,6 +52,13 @@ class SpeedTestViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.value = _uiState.value.copy(selectedServer = server)
     }
 
+    private var testJob: Job? = null
+
+    fun stopTest() {
+        testJob?.cancel()
+        _uiState.value = _uiState.value.copy(isRunning = false, stage = SpeedTestStage.IDLE)
+    }
+
     fun startTest() {
         val server = _uiState.value.selectedServer
         val downloadUrl = if (server.contains("http")) server else "https://$server/__down?bytes=50000000"
@@ -61,10 +71,12 @@ class SpeedTestViewModel(application: Application) : AndroidViewModel(applicatio
             uploadSpeed = 0.0,
             pingMs = 0.0,
             jitterMs = 0.0,
-            progress = 0f
+            progress = 0f,
+            downloadHistory = emptyList(),
+            uploadHistory = emptyList()
         )
 
-        viewModelScope.launch {
+        testJob = viewModelScope.launch {
             try {
                 // 1. Ping & Jitter
                 val (ping, jitter) = SpeedTestManager.runPingTest()
@@ -72,13 +84,21 @@ class SpeedTestViewModel(application: Application) : AndroidViewModel(applicatio
                 
                 // 2. Download
                 SpeedTestManager.runDownload(downloadUrl) { speed, progress ->
-                    _uiState.value = _uiState.value.copy(downloadSpeed = speed, progress = progress)
+                    _uiState.value = _uiState.value.copy(
+                        downloadSpeed = speed, 
+                        progress = progress,
+                        downloadHistory = (_uiState.value.downloadHistory + speed.toFloat()).takeLast(60)
+                    )
                 }
                 
                 // 3. Upload
                 _uiState.value = _uiState.value.copy(stage = SpeedTestStage.UPLOAD, progress = 0f)
                 SpeedTestManager.runUpload(uploadUrl) { speed, progress ->
-                    _uiState.value = _uiState.value.copy(uploadSpeed = speed, progress = progress)
+                    _uiState.value = _uiState.value.copy(
+                        uploadSpeed = speed, 
+                        progress = progress,
+                        uploadHistory = (_uiState.value.uploadHistory + speed.toFloat()).takeLast(60)
+                    )
                 }
                 
                 _uiState.value = _uiState.value.copy(isRunning = false, stage = SpeedTestStage.FINISHED, progress = 1f)

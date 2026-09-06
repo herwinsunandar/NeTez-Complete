@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,10 +12,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.herwin.netez.R
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.HistoryViewModel
@@ -44,7 +44,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = viewModel()) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "${results.size} Total Reports",
+                text = stringResource(R.string.history_total, results.size),
                 color = TextGray,
                 style = MaterialTheme.typography.labelMedium,
                 letterSpacing = 1.sp
@@ -54,18 +54,18 @@ fun HistoryScreen(viewModel: HistoryViewModel = viewModel()) {
                 onClick = { viewModel.clearHistory() },
                 colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
             ) {
-                Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(AppIcons.deleteSweep(), contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("CLEAR ALL", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(stringResource(R.string.history_clear_all), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
 
         if (results.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Analytics, contentDescription = null, tint = TextGray.copy(alpha = 0.2f), modifier = Modifier.size(64.dp))
+                    Icon(AppIcons.analytics(), contentDescription = null, tint = TextGray.copy(alpha = 0.2f), modifier = Modifier.size(64.dp))
                     Spacer(Modifier.height(16.dp))
-                    Text("No reports generated yet.", color = TextGray)
+                    Text(stringResource(R.string.history_empty), color = TextGray)
                 }
             }
         } else {

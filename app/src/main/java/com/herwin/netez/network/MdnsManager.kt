@@ -129,18 +129,18 @@ class MdnsManager(context: Context) {
         val listener = object : NsdManager.ResolveListener {
             override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
                 Log.e("MdnsManager", "Resolve failed: $errorCode")
-                completer.complete(null)
+                if (!completer.isCompleted) completer.complete(null)
             }
 
             override fun onServiceResolved(resolvedInfo: NsdServiceInfo) {
                 Log.d("MdnsManager", "Service resolved: ${resolvedInfo.serviceName} at ${resolvedInfo.host}")
-                completer.complete(resolvedInfo)
+                if (!completer.isCompleted) completer.complete(resolvedInfo)
             }
         }
 
         try {
             nsdManager.resolveService(serviceInfo, listener)
-            val result = withTimeoutOrNull(5000) { completer.await() }
+            val result = withTimeoutOrNull(2000) { completer.await() }
             if (result != null) {
                 val mdnsService = MdnsService(
                     name = result.serviceName,
@@ -149,7 +149,7 @@ class MdnsManager(context: Context) {
                     port = result.port,
                     ipAddress = result.host?.hostAddress
                 )
-                val key = "${mdnsService.name}_${mdnsService.type}"
+                val key = "${mdnsService.name}_${mdnsService.type}_${mdnsService.ipAddress}"
                 if (!resolvedServices.containsKey(key)) {
                     resolvedServices[key] = mdnsService
                     withContext(Dispatchers.Main) {
@@ -159,7 +159,7 @@ class MdnsManager(context: Context) {
             }
         } catch (e: Exception) {
             Log.e("MdnsManager", "Error resolving service", e)
-            completer.complete(null)
+            if (!completer.isCompleted) completer.complete(null)
         }
     }
 }

@@ -14,18 +14,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,14 +35,15 @@ import com.herwin.netez.network.DnsRecord
 import com.herwin.netez.network.DnsRecordType
 import com.herwin.netez.network.DnsServer
 import com.herwin.netez.network.PublicDnsServers
+import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.ResultRow
+import com.herwin.netez.ui.theme.PremiumNavy
+import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.DnsViewModel
 
-private val LightBg = Color(0xFFF6F7FB)
-private val BrandBlue = Color(0xFF2563EB)
-private val TextDark = Color(0xFF111827)
-private val TextHint = Color(0xFF9CA3AF)
-private val BorderColor = Color(0xFFE6E8F0)
+private val BrandBlue = Color(0xFF6C8CFF)
+private val BorderColor = Color(0xFF2D324D)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,16 +54,17 @@ fun DnsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showServerMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBg)
+            .background(PremiumNavy)
     ) {
         // 1. Top Tabs
         PrimaryScrollableTabRow(
             selectedTabIndex = uiState.recordType.ordinal,
-            containerColor = Color.White,
+            containerColor = SoftDarkBg,
             contentColor = BrandBlue,
             edgePadding = 16.dp,
             divider = {},
@@ -111,21 +114,21 @@ fun DnsScreen(
                     Surface(
                         onClick = { showServerMenu = true },
                         shape = CircleShape,
-                        color = Color.White,
+                        color = SoftDarkBg,
                         border = BorderStroke(1.dp, BorderColor),
                         modifier = Modifier.size(32.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(16.dp), tint = TextGray)
+                            Icon(AppIcons.expandMore(), null, modifier = Modifier.size(16.dp), tint = TextGray)
                             
                             DropdownMenu(
                                 expanded = showServerMenu,
                                 onDismissRequest = { showServerMenu = false },
-                                containerColor = Color.White
+                                containerColor = SoftDarkBg
                             ) {
                                 PublicDnsServers.forEach { server ->
                                     DropdownMenuItem(
-                                        text = { Text("${server.name} (${server.ip})", fontSize = 14.sp) },
+                                        text = { Text("${server.name} (${server.ip})", fontSize = 14.sp, color = Color.White) },
                                         onClick = {
                                             viewModel.updateServer(server)
                                             showServerMenu = false
@@ -138,7 +141,7 @@ fun DnsScreen(
                                                     modifier = Modifier.size(20.dp, 14.dp).clip(RoundedCornerShape(2.dp))
                                                 )
                                             } else {
-                                                Icon(Icons.Default.Dns, null, modifier = Modifier.size(16.dp))
+                                                Icon(AppIcons.dns(), null, modifier = Modifier.size(16.dp), tint = Color.White)
                                             }
                                         }
                                     )
@@ -154,7 +157,7 @@ fun DnsScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp)),
                     shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
+                    color = SoftDarkBg,
                     border = BorderStroke(1.dp, BorderColor)
                 ) {
                     Row(
@@ -165,15 +168,15 @@ fun DnsScreen(
                         TextField(
                             value = uiState.domain,
                             onValueChange = { viewModel.updateDomain(it) },
-                            placeholder = { Text("Enter domain (e.g. google.com)", color = TextHint, fontSize = 15.sp) },
+                            placeholder = { Text("Enter domain (e.g. google.com)", color = TextGray, fontSize = 15.sp) },
                             modifier = Modifier.weight(1f),
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
                                 unfocusedContainerColor = Color.Transparent,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
-                                focusedTextColor = TextDark,
-                                unfocusedTextColor = TextDark
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
                             ),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight.Medium)
@@ -218,7 +221,7 @@ fun DnsScreen(
                                     )
                                     Spacer(Modifier.width(10.dp))
                                 } else {
-                                    Icon(Icons.Default.Dns, null, tint = BrandBlue, modifier = Modifier.size(16.dp))
+                                    Icon(AppIcons.dns(), null, tint = BrandBlue, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(8.dp))
                                 }
                                 Text(
@@ -227,7 +230,7 @@ fun DnsScreen(
                                     color = BrandBlue,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
@@ -246,22 +249,38 @@ fun DnsScreen(
                         EmptyStateSuggestion { viewModel.updateServer(PublicDnsServers[1]) }
                     }
                 } else {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Query Results",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Row {
+                                IconButton(onClick = {
+                                    viewModel.copyResultsToClipboard()
+                                    Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
+                                }) {
+                                    Icon(AppIcons.contentCopy(), null, tint = BrandBlue)
+                                }
+                                IconButton(onClick = {
+                                    viewModel.shareResults(context)
+                                }) {
+                                    Icon(AppIcons.share(), null, tint = BrandBlue)
+                                }
+                            }
+                        }
+                    }
                     items(res.records) { record ->
                         DnsProResultCard(
                             record = record,
                             onPing = { onNavigateToPing(record.data) },
                             onTrace = { onNavigateToTraceroute(record.data) }
-                        )
-                    }
-                    item {
-                        val localContext = LocalContext.current
-                        com.herwin.netez.ui.components.ResultFooter(
-                            fullTextToCopy = res.records.joinToString("\n") { it.data },
-                            onCopyAll = {
-                                val clipboard = localContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("DNS Records", res.records.joinToString("\n") { it.data }))
-                                android.widget.Toast.makeText(localContext, "All records copied", android.widget.Toast.LENGTH_SHORT).show()
-                            }
                         )
                     }
                 }
@@ -283,7 +302,7 @@ fun DnsServerChip(server: DnsServer, isSelected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) BrandBlue else Color.White,
+        color = if (isSelected) BrandBlue else SoftDarkBg,
         border = if (isSelected) null else BorderStroke(1.dp, BorderColor),
         modifier = Modifier.height(36.dp)
     ) {
@@ -293,14 +312,14 @@ fun DnsServerChip(server: DnsServer, isSelected: Boolean, onClick: () -> Unit) {
         ) {
             Text(
                 text = server.name,
-                color = if (isSelected) Color.White else TextDark,
+                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f),
                 fontSize = 12.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = if (server.ip == "System") "" else server.ip,
-                color = if (isSelected) Color.White.copy(alpha = 0.7f) else TextHint,
+                color = if (isSelected) Color.White.copy(alpha = 0.7f) else TextGray,
                 fontSize = 10.sp
             )
         }
@@ -313,21 +332,19 @@ fun DnsProResultCard(
     onPing: () -> Unit,
     onTrace: () -> Unit
 ) {
-    val context = LocalContext.current
-    
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = SoftDarkBg,
         border = BorderStroke(1.dp, BorderColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                com.herwin.netez.ui.components.ResultRow("IP Address", record.data)
+                ResultRow("IP Address", record.data)
             }
             
             Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = LightBg)
+            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
             Spacer(Modifier.height(12.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -346,8 +363,8 @@ fun DnsProResultCard(
 
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionChip(Icons.Default.NetworkCheck, "Ping", onPing)
-                ActionChip(Icons.Default.Route, "Trace", onTrace)
+                ActionChip(AppIcons.networkCheck(), "Ping", onPing)
+                ActionChip(AppIcons.route(), "Trace", onTrace)
             }
         }
     }
@@ -356,17 +373,17 @@ fun DnsProResultCard(
 @Composable
 fun ResultMetric(label: String, value: String) {
     Column {
-        Text(label, fontSize = 9.sp, color = TextHint, fontWeight = FontWeight.Bold)
-        Text(value, fontSize = 12.sp, color = TextDark, fontWeight = FontWeight.Bold)
+        Text(label, fontSize = 9.sp, color = TextGray, fontWeight = FontWeight.Bold)
+        Text(value, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun ActionChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+fun ActionChip(icon: Painter, label: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(8.dp),
-        color = LightBg,
+        color = Color.White.copy(alpha = 0.05f),
         modifier = Modifier.height(32.dp)
     ) {
         Row(
@@ -375,7 +392,7 @@ fun ActionChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Str
         ) {
             Icon(icon, null, modifier = Modifier.size(14.dp), tint = BrandBlue)
             Spacer(Modifier.width(6.dp))
-            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
     }
 }
@@ -387,13 +404,13 @@ fun EmptyStateSuggestion(onTryOther: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(48.dp), tint = TextHint.copy(alpha = 0.5f))
-        Text("No records found", color = TextDark, fontWeight = FontWeight.Bold)
+        Icon(AppIcons.searchOff(), null, modifier = Modifier.size(48.dp), tint = TextGray.copy(alpha = 0.5f))
+        Text("No records found", color = Color.White, fontWeight = FontWeight.Bold)
         Text(
             "Try switching to a different DNS server or check the domain spelling.",
-            color = TextHint,
+            color = TextGray,
             fontSize = 12.sp,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 32.dp)
         )
         TextButton(onClick = onTryOther) {

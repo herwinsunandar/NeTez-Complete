@@ -6,7 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object HttpHeaderManager {
-    suspend fun getHeaders(urlString: String): Map<String, List<String>> = withContext(Dispatchers.IO) {
+    suspend fun getHeaders(urlString: String): Map<String?, List<String>> = withContext(Dispatchers.IO) {
         try {
             val url = if (urlString.startsWith("http")) URL(urlString) else URL("http://$urlString")
             val conn = url.openConnection() as HttpURLConnection

@@ -8,6 +8,10 @@
     <string name="nav_utilities">Utilities</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_report">Report &amp; History</string>
+    <string name="history_total">%1$d Total Reports</string>
+    <string name="history_clear_all">CLEAR ALL</string>
+    <string name="history_empty">No reports generated yet.</string>
+    <string name="dash_pass_prompt">Save your first password 🔒</string>
 
     <!-- Dashboard -->
     <string name="dash_status">Connection Overview</string>
@@ -18,9 +22,41 @@
     <!-- Settings -->
     <string name="set_appearance">Appearance</string>
     <string name="set_theme">Theme Mode</string>
+    <string name="set_theme_system">System Default</string>
+    <string name="set_theme_light">Light</string>
+    <string name="set_theme_dark">Dark</string>
     <string name="set_language">Language</string>
     <string name="set_about">About NeTez</string>
     <string name="set_history_desc">View all network test logs</string>
+
+    <!-- Settings Screen New -->
+    <string name="set_security">Security</string>
+    <string name="set_bio_auth">Biometric Authentication</string>
+    <string name="set_bio_auth_desc">Use Fingerprint/Face for Password Manager</string>
+    <string name="set_pin_title">Set/Change PIN</string>
+    <string name="set_pin_not_set">Not Set</string>
+    <string name="set_pin_active">PIN is Active</string>
+    <string name="set_autolock">Auto-lock 30s</string>
+    <string name="set_autolock_desc">Auto-lock after 30s in background</string>
+    <string name="set_clip_clear">Clear clipboard 30s</string>
+    <string name="set_clip_clear_desc">Auto-clear password from clipboard</string>
+    <string name="set_integrations">Integration API Keys</string>
+    <string name="set_abuseipdb_key">AbuseIPDB API Key</string>
+    <string name="set_shodan_key">Shodan API Key</string>
+    <string name="set_database">Database</string>
+    <string name="set_update_vendor">Update Vendor DB</string>
+    <string name="set_update_vendor_desc">Manually refresh MAC address database (OUI)</string>
+    <string name="set_legal_notice">Legal Notice</string>
+    <string name="set_legal_notice_desc">Review and manage network usage consent</string>
+    <string name="set_pin_dialog_title">Set 6-digit PIN</string>
+    <string name="set_pin_dialog_desc">This PIN is used as a backup if biometric authentication fails.</string>
+    <string name="set_pin_field">6-digit PIN</string>
+    <string name="set_api_key_field">API Key</string>
+    <string name="set_get_api_key">Get Free API Key →</string>
+    <string name="set_legal_revoke_title">Legal Notice</string>
+    <string name="set_legal_revoke_desc">You have previously agreed to the Legal and Ethics Notice for network testing. Do you wish to revoke your consent?</string>
+    <string name="set_btn_revoke">REVOKE CONSENT</string>
+    <string name="set_vendor_update_started">Update started in background</string>
 
     <!-- Quick Actions -->
     <string name="action_quick_ping">QUICK PING</string>
@@ -32,10 +68,417 @@
     <string name="diag_ping">Ping Test</string>
     <string name="diag_traceroute">Traceroute</string>
     <string name="diag_speedtest">Speed Test</string>
+    <string name="diag_stability">Stability Test</string>
+    <string name="diag_stability_desc">Check local network load &amp; bufferbloat</string>
     <string name="diag_dns">DNS Lookup</string>
     <string name="diag_http_check">HTTP Check</string>
     <string name="diag_ssl_checker">SSL/TLS Checker</string>
+    <string name="diag_ssl_checker_desc">Inspect SSL/TLS certificates</string>
     <string name="diag_blacklist">Blacklist Check</string>
+    <string name="diag_isp_comparison">ISP Comparison &amp; Rating</string>
+    <string name="diag_isp_comparison_desc">Compare ISPs in your area and rate your experience</string>
+    <string name="diag_security">Security</string>
+    <string name="nav_password_strength">Password Strength</string>
+    <string name="security_password_manager">Password Manager</string>
+    <string name="diag_security_desc">SSL Checker, Blacklist, and more</string>
+
+    <!-- App Permission Scanner -->
+    <string name="security_app_scanner_title">App Permission Scanner</string>
+    <string name="security_posture_detail_title">Security Posture</string>
+    <string name="security_recommendations_title">Prioritized Recommendations</string>
+    <string name="security_recommendations_empty">No critical recommendations at this time.</string>
+    <string name="security_rescanning">Rescanning security posture...</string>
+    <string name="security_share_subject">Security Posture Report</string>
+    <string name="security_app_scanner_desc">Scan apps for dangerous permission combinations</string>
+    <string name="app_scan_filter_all">All(%1$d)</string>
+    <string name="app_scan_filter_dangerous">%1$d Dangerous</string>
+    <string name="app_scan_filter_suspicious">%1$d Suspicious</string>
+    <string name="app_scan_risk_score">Risk: %1$d</string>
+    <string name="app_scan_unknown_vendor">Unknown Vendor</string>
+    <string name="app_scan_uninstall">UNINSTALL</string>
+    <string name="app_scan_scanning">Scanning apps...</string>
+    <string name="app_scan_start_desc">Scan your installed applications to identify dangerous permission combinations and potential privacy risks.</string>
+    <string name="app_scan_btn_start">START SCAN</string>
+    <string name="app_scan_empty">No suspicious apps found.</string>
+    <string name="app_scan_risk_pinjol">Pinjol Suspect (High Risk)</string>
+    <string name="app_scan_risk_privacy">Privacy Risk</string>
+    <string name="app_scan_suspicious_comb">Suspicious permission combination (SMS + Contacts + Audio)</string>
+    <string name="app_scan_camera_location">Simultaneous Camera &amp; Location access</string>
+    <string name="app_scan_sensitive_access">Sensitive data access</string>
+    <string name="app_scan_system_sms">System utility requesting SMS permission</string>
+    <string name="app_scan_trusted_system">Trusted system app</string>
+    <string name="app_scan_system_app">System app</string>
+    <string name="app_scan_hidden_banner">%1$d system apps hidden - Tap to show</string>
+    <string name="app_scan_disable_system">Disable (System App)</string>
+    <string name="app_scan_info_error">Failed to open app settings</string>
+    <string name="app_scan_app_info">APP INFO</string>
+    <string name="app_scan_results_copied">Results copied</string>
+    <string name="app_scan_share_subject">App Permission Security Scan</string>
+    <string name="app_scan_report_header">App Permission Scanner Report</string>
+
+    <!-- WiFi Security Audit -->
+    <string name="security_wifi_audit_title">WiFi Security Audit</string>
+    <string name="security_wifi_audit_desc">Check encryption, WPS, DNS, and password safety</string>
+    <string name="wifi_audit_status_not_scanned">Not scanned</string>
+    <string name="wifi_audit_status_issues">%1$d issues found</string>
+    <string name="wifi_audit_status_critical">%1$d Critical! 🔴</string>
+    <string name="wifi_audit_scan">SCAN</string>
+    <string name="wifi_audit_scan_lan">SCAN LAN</string>
+    <string name="wifi_audit_risk_score">Risk Score: %1$d/100</string>
+    <string name="wifi_audit_safe">SAFE</string>
+    <string name="wifi_audit_suspicious">SUSPICIOUS</string>
+    <string name="wifi_audit_critical_label">CRITICAL</string>
+    <string name="wifi_audit_encryption">Encryption</string>
+    <string name="wifi_audit_wps">WPS (WiFi Protected Setup)</string>
+    <string name="wifi_audit_ssid_pass">SSID &amp; Password</string>
+    <string name="wifi_audit_dns">DNS Security</string>
+    <string name="wifi_audit_gateway">Router Gateway %1$s</string>
+    <string name="wifi_audit_channel">Channel %1$d (%2$s)</string>
+    <string name="wifi_audit_hidden">Hidden SSID</string>
+    <string name="wifi_audit_pmf">PMF Protection</string>
+    <string name="wifi_audit_network_type">Network Type</string>
+    <string name="wifi_audit_devices">Devices on Network</string>
+    <string name="wifi_audit_how_to_fix">How to Fix</string>
+    <string name="wifi_audit_copy_report">Copy Report</string>
+    <string name="wifi_audit_share">Share</string>
+    <string name="wifi_audit_fix_steps">Fix Steps</string>
+    <string name="wifi_audit_confetti">WiFi is now secure! 🎉</string>
+    <!-- WiFi Security Audit Enhancement -->
+    <string name="wifi_audit_grade_excellent">EXCELLENT</string>
+    <string name="wifi_audit_grade_good">GOOD</string>
+    <string name="wifi_audit_grade_fair">FAIR</string>
+    <string name="wifi_audit_grade_weak">WEAK</string>
+    <string name="wifi_audit_grade_critical">CRITICAL</string>
+    <string name="wifi_audit_grade_excellent_desc">WiFi connection has a strong security configuration.</string>
+    <string name="wifi_audit_grade_good_desc">Connection is relatively secure with some recommendations.</string>
+    <string name="wifi_audit_grade_fair_desc">Some security weaknesses found.</string>
+    <string name="wifi_audit_grade_weak_desc">Connection has significant security risks.</string>
+    <string name="wifi_audit_grade_critical_desc">Connection uses a very weak configuration.</string>
+
+    <string name="wifi_audit_cat_encryption">Encryption &amp; Authentication</string>
+    <string name="wifi_audit_cat_config">WiFi Configuration</string>
+    <string name="wifi_audit_cat_trust">Access Point Trust</string>
+    <string name="wifi_audit_cat_network">Network Security</string>
+    <string name="wifi_audit_cat_privacy">Privacy</string>
+    <string name="wifi_audit_cat_exposure">Network Exposure</string>
+
+    <string name="wifi_audit_checklist_title">Secure WiFi Checklist</string>
+    <string name="wifi_audit_checklist_wpa23">WPA2/WPA3 enabled</string>
+    <string name="wifi_audit_checklist_wpa3_avail">WPA3 available – consider upgrading</string>
+    <string name="wifi_audit_checklist_wps_off">WPS disabled</string>
+    <string name="wifi_audit_checklist_strong_pass">Strong unique WiFi password</string>
+    <string name="wifi_audit_checklist_admin_pass">Router admin password changed</string>
+    <string name="wifi_audit_checklist_https_mgmt">HTTPS router management enabled</string>
+    <string name="wifi_audit_checklist_telnet_off">Telnet disabled</string>
+    <string name="wifi_audit_checklist_firmware">Firmware updated</string>
+    <string name="wifi_audit_checklist_guest">Guest network enabled for untrusted devices</string>
+    <string name="wifi_audit_checklist_isolation">Client isolation enabled where appropriate</string>
+
+    <string name="wifi_audit_why_it_matters">Why it matters</string>
+    <string name="wifi_audit_why_it_matters_desc">This parameter is crucial to ensure your WiFi connection is secure from potential eavesdropping or unauthorized access.</string>
+    <string name="wifi_audit_rec">Recommendation:</string>
+    <string name="wifi_audit_rogue_ap">Rogue Access Point</string>
+    <string name="wifi_audit_private_dns">Private DNS</string>
+    <string name="wifi_audit_mac_privacy">MAC Privacy</string>
+    <string name="wifi_audit_unknown_wifi">Unknown WiFi</string>
+    <string name="wifi_audit_bssid_label">BSSID: %1$s</string>
+    <string name="wifi_audit_gtw_label">GTW: %1$s</string>
+    <string name="wifi_audit_ch_label">Ch %1$d</string>
+    <string name="wifi_audit_score_title">WiFi Security Score</string>
+    <string name="wifi_audit_verified_count">%1$d / %2$d verified</string>
+    <string name="wifi_audit_report_copied">Report Copied</string>
+    <string name="wifi_audit_router_fail">Failed to open router</string>
+    <string name="wifi_audit_details_header">AUDIT DETAILS</string>
+    <string name="wifi_audit_duration_label">Audit Duration: %1$dms</string>
+    <string name="wifi_audit_report_title">WiFi Security Audit – Netez</string>
+    <string name="wifi_audit_report_ssid">SSID: %1$s</string>
+    <string name="wifi_audit_report_security">Security: %1$s</string>
+    <string name="wifi_audit_report_frequency">Frequency: %1$d MHz</string>
+    <string name="wifi_audit_report_channel">Channel: %1$d</string>
+    <string name="wifi_audit_report_score">Security Score: %1$d/100</string>
+    <string name="wifi_audit_report_grade">Grade: %1$s</string>
+    <string name="wifi_audit_report_critical">Critical: %1$d</string>
+    <string name="wifi_audit_report_warning">Warning: %1$d</string>
+    <string name="wifi_audit_report_findings">Findings:</string>
+    <string name="wifi_audit_report_recommendations">Recommendations:</string>
+
+    <!-- WiFi Audit Engine Strings -->
+    <string name="wifi_audit_enc_wpa3_detail">WPA3 detected (Modern &amp; Secure).</string>
+    <string name="wifi_audit_enc_wpa2_aes_detail">WPA2 with modern encryption (CCMP/AES).</string>
+    <string name="wifi_audit_enc_wpa2_aes_rec">Consider upgrading to WPA3 if supported by your router.</string>
+    <string name="wifi_audit_enc_wpa2_tkip_detail">WPA2 using less secure TKIP.</string>
+    <string name="wifi_audit_enc_wpa2_tkip_rec">Change router configuration to AES/CCMP.</string>
+    <string name="wifi_audit_enc_wep_detail">Highly weak WEP protocol detected.</string>
+    <string name="wifi_audit_enc_wep_rec">Immediately switch to WPA2 or WPA3.</string>
+    <string name="wifi_audit_enc_open_detail">Open network with no encryption.</string>
+    <string name="wifi_audit_enc_open_rec">Use a VPN and enable encryption on your router.</string>
+    <string name="wifi_audit_enc_unknown_detail">Cannot verify encryption.</string>
+
+    <string name="wifi_audit_wps_on_detail">WPS detected active.</string>
+    <string name="wifi_audit_wps_off_detail">WPS not detected.</string>
+    <string name="wifi_audit_wps_on_rec">Disable WPS if not required.</string>
+
+    <string name="wifi_audit_pmf_on_detail">Protected Management Frames supported.</string>
+    <string name="wifi_audit_pmf_off_detail">PMF cannot be verified.</string>
+    <string name="wifi_audit_pmf_off_rec">Enable PMF if supported by your router.</string>
+
+    <string name="wifi_audit_ssid_default_detail">SSID appears to use a default pattern.</string>
+    <string name="wifi_audit_ssid_custom_detail">Unique SSID in use.</string>
+    <string name="wifi_audit_ssid_default_rec">Ensure the WiFi password has been changed from vendor default.</string>
+
+    <string name="wifi_audit_rogue_ap_warn_detail">Potential Rogue AP: Same SSID found with different encryption.</string>
+    <string name="wifi_audit_rogue_ap_safe_detail">No AP anomalies detected.</string>
+    <string name="wifi_audit_rogue_ap_warn_rec">Beware of potential Evil Twin attack.</string>
+
+    <string name="wifi_audit_gtw_detail">Gateway: %1$s. Open ports: %2$s</string>
+    <string name="wifi_audit_gtw_telnet_rec">Disable Telnet service on the router.</string>
+    <string name="wifi_audit_gtw_http_rec">Use HTTPS for router management.</string>
+
+    <string name="wifi_audit_dns_detail">DNS: %1$s</string>
+    <string name="wifi_audit_dns_rec">Use a private DNS such as Cloudflare or Quad9.</string>
+
+    <string name="wifi_audit_private_dns_detail">Private DNS Mode: %1$s</string>
+    <string name="wifi_audit_private_dns_off_rec">Enable Private DNS to improve privacy.</string>
+
+    <string name="wifi_audit_mac_privacy_detail">MAC Privacy active on modern devices.</string>
+    <string name="wifi_audit_mac_privacy_rec">Randomized MAC helps reduce tracking based on MAC address.</string>
+
+    <string name="wifi_audit_lan_exposure_detail">%1$d devices detected on the local network.</string>
+    <string name="wifi_audit_lan_exposure_rec">Beware of unknown devices on your local network.</string>
+    <string name="wifi_audit_not_verifiable">Cannot be verified</string>
+    <string name="wifi_audit_unknown_desc">Cannot be verified by Android on this device.</string>
+
+    <!-- WiFi Audit Engine Results -->
+    <string name="wifi_audit_enc_wpa3">WPA3 - Most secure 🟢</string>
+    <string name="wifi_audit_enc_wpa3_fix">Maintain WPA3</string>
+    <string name="wifi_audit_enc_wpa2">WPA2-PSK (CCMP/AES) - Secure 🟢</string>
+    <string name="wifi_audit_enc_wpa2_fix">Upgrade to WPA3 if router supports it</string>
+    <string name="wifi_audit_enc_wpa">WPA (TKIP) - Legacy, vulnerable 🟡</string>
+    <string name="wifi_audit_enc_wpa_fix">Change to WPA2/WPA3 in router settings</string>
+    <string name="wifi_audit_enc_wep">WEP - Highly insecure! 🔴</string>
+    <string name="wifi_audit_enc_wep_fix">IMMEDIATELY change to WPA2/WPA3. WEP can be hacked in minutes.</string>
+    <string name="wifi_audit_enc_open">OPEN - No password! Everyone can eavesdrop 🔴🔴</string>
+    <string name="wifi_audit_enc_open_fix">IMMEDIATELY enable WPA2/WPA3 with a strong password.</string>
+    <string name="wifi_audit_enc_unknown">Unknown: %1$s</string>
+    <string name="wifi_audit_enc_unknown_fix">Check router settings</string>
+
+    <string name="wifi_audit_wps_active">WPS ACTIVE - Vulnerable to brute force! 🔴</string>
+    <string name="wifi_audit_wps_active_fix">Disable WPS in router settings. WPS PIN is highly insecure.</string>
+    <string name="wifi_audit_wps_safe">WPS Disabled - Secure 🟢</string>
+    <string name="wifi_audit_wps_safe_fix">Keep it disabled</string>
+
+    <string name="wifi_audit_ssid_default">Default SSID: %1$s - Likely default password 🟡</string>
+    <string name="wifi_audit_ssid_default_fix">Change SSID &amp; router password from defaults</string>
+    <string name="wifi_audit_ssid_custom">Custom SSID: %1$s - Verify password strength</string>
+    <string name="wifi_audit_ssid_custom_fix">Ensure password is 12+ chars, WPA2/WPA3</string>
+
+    <string name="wifi_audit_dns_google">Google DNS 8.8.8.8 - Fast but Google sees traffic 🟡</string>
+    <string name="wifi_audit_dns_google_fix">Switch to 1.1.1.1 (Cloudflare) for privacy or 9.9.9.9 (Quad9) for security</string>
+    <string name="wifi_audit_dns_cloudflare">Cloudflare DNS 1.1.1.1 - Privacy focused 🟢</string>
+    <string name="wifi_audit_dns_quad9">Quad9 DNS 9.9.9.9 - Security focused 🟢</string>
+    <string name="wifi_audit_dns_none">DNS not detected</string>
+    <string name="wifi_audit_dns_isp">ISP DNS: %1$s - ISP can monitor browsing</string>
+    <string name="wifi_audit_dns_isp_fix">Switch to 1.1.1.1 or 9.9.9.9 in Android Private DNS settings</string>
+    <string name="wifi_audit_dns_safe_fix">Good</string>
+
+    <string name="wifi_audit_gtw_telnet">Telnet port 23 OPEN! Extremely dangerous 🔴</string>
+    <string name="wifi_audit_gtw_telnet_fix">Disable Telnet in router and change admin password</string>
+    <string name="wifi_audit_gtw_http">HTTP Admin Panel OPEN 🟡</string>
+    <string name="wifi_audit_gtw_http_fix">Use HTTPS if router supports it</string>
+    <string name="wifi_audit_gtw_safe">Gateway %1$s - No critical ports open 🟢</string>
+    <string name="wifi_audit_gtw_safe_fix">Secure</string>
+
+    <string name="wifi_audit_ch_detail">%1$d networks on same channel - %2$s</string>
+    <string name="wifi_audit_ch_fix">Change router channel to a less crowded one if slow</string>
+    <string name="wifi_audit_ch_busy">Crowded</string>
+    <string name="wifi_audit_ch_clear">Clear</string>
+
+    <string name="wifi_audit_hidden_warn">Hidden SSID - Does not add security, increases tracking 🟡</string>
+    <string name="wifi_audit_hidden_fix">Use WPA3 + strong password instead of hiding SSID</string>
+
+    <string name="wifi_audit_pmf_warn">PMF Disabled - Vulnerable to deauth attacks 🟡</string>
+    <string name="wifi_audit_pmf_fix">Enable Protected Management Frames in router if available</string>
+
+    <string name="wifi_audit_public_warn">Public WiFi! Traffic can be intercepted 🔴</string>
+    <string name="wifi_audit_public_fix">Use a VPN when connected to public WiFi.</string>
+
+    <string name="wifi_audit_lan_detail">%1$d devices detected previously</string>
+    <string name="wifi_audit_lan_fix">Open LAN Scanner to rescan</string>
+
+    <!-- Security Screen -->
+    <string name="security_pass_manager_title">Password Manager</string>
+    <string name="security_pass_manager_desc">Manage your passwords securely</string>
+    <string name="security_pass_strength_title">Password Strength</string>
+    <string name="security_pass_strength_desc">Check password strength &amp; leak status</string>
+
+    <!-- Leak Check -->
+    <string name="security_leak_check">Leak Check</string>
+    <string name="leak_check_desc">Check if email leaked in 800+ databases</string>
+    <string name="leak_field_multi_email">Email / Emails</string>
+    <string name="leak_placeholder_multi_email">name@gmail.com or paste multiple\nbudi@gmail.com\nsiti@company.co.id</string>
+    <string name="leak_btn_upload_csv">Upload CSV</string>
+    <string name="leak_btn_check_my_email">Check My Email</string>
+    <string name="leak_emails_detected">%1$d emails detected</string>
+    <string name="leak_status_clean">CLEAN</string>
+    <string name="leak_status_breached">BREACHED</string>
+    <string name="leak_clean_desc">No breaches found</string>
+    <string name="leak_breached_desc">LEAK! Found in %1$d breaches</string>
+    <string name="leak_batch_breached_desc">BREACHED %1$d/%2$d</string>
+    <string name="leak_batch_clean_desc">CLEAN %1$d/%2$d</string>
+    <string name="leak_summary_chips">All(%1$d) • %2$d Breached • %3$d Clean • %4$d Error</string>
+    <string name="leak_risk_score">Risk Score</string>
+    <string name="leak_data_breached">Data: %1$s</string>
+    <string name="leak_advice">Advice: Change your password immediately</string>
+    <string name="leak_privacy_disclaimer">🔒 Emails are not saved on the server, only checked via API.</string>
+    <string name="leak_offline_disclaimer">File processed offline, not uploaded.</string>
+    <string name="leak_invalid_skipped">%1$d invalid emails skipped</string>
+    <string name="leak_csv_preview_title">Found %1$d emails in file</string>
+    <string name="leak_csv_preview_desc">%1$d invalid skipped • Preview first %2$d</string>
+    <string name="leak_checking_progress">Checking %1$d/%2$d • %3$d breached so far</string>
+    <string name="leak_export_results">Export Results CSV</string>
+
+    <!-- Phishing Check -->
+    <string name="security_phishing_check">Phishing Check</string>
+    <string name="phishing_check_desc">Check if URL is safe or a phishing attempt</string>
+    <string name="phishing_field_url">URL / Domain</string>
+    <string name="phishing_placeholder_url">https://bca-secure-login.com or tokopedia.com</string>
+    <string name="phishing_btn_paste">Paste from Clipboard</string>
+    <string name="phishing_status_safe">SAFE</string>
+    <string name="phishing_status_phishing">PHISHING</string>
+    <string name="phishing_status_suspicious">SUSPICIOUS</string>
+    <string name="phishing_safe_desc">SAFE - No phishing detected</string>
+    <string name="phishing_phishing_desc">DANGER! Phishing identified!</string>
+    <string name="phishing_suspicious_desc">SUSPICIOUS - Use with caution</string>
+    <string name="phishing_risk_score">Risk Score</string>
+    <string name="phishing_layer_safebrowsing">Google Safe Browsing</string>
+    <string name="phishing_layer_feed">Local Phishing Database</string>
+    <string name="phishing_layer_heuristic">Heuristic Analysis</string>
+    <string name="phishing_layer_age">Domain Age Check</string>
+    <string name="phishing_layer_ssl">SSL Certificate Check</string>
+    <string name="phishing_report_block">REPORT &amp; BLOCK</string>
+    <string name="phishing_education_title">Phishing Characteristics</string>
+    <string name="phishing_education_content">1. Strange Domain\n2. Contains @ symbol\n3. Asking for OTP/PIN\n4. Recently registered domain</string>
+    <string name="phishing_clipboard_detected">URL detected in clipboard - Check now?</string>
+    <string name="phishing_offline_disclaimer">Primary check is offline via daily database.</string>
+
+    <!-- SSL Reminder -->
+    <string name="security_ssl_reminder">SSL Reminder</string>
+    <string name="ssl_reminder_desc">Monitor domain SSL certificates and get alerts</string>
+    <string name="ssl_stat_monitoring">Monitor %1$d domains • %2$d expiring soon</string>
+    <string name="ssl_stat_expired_warning">⚠️ %1$d SSL expired in %2$d days</string>
+    <string name="ssl_banner_expiring">⚠️ %1$d SSL will expire - View</string>
+    <string name="ssl_banner_expired">⚠️ %1$d SSL EXPIRED - View</string>
+    <string name="ssl_domain_placeholder">tokopedia.com</string>
+    <string name="ssl_btn_bulk_add">Bulk Add</string>
+    <string name="ssl_monitored_domains">Monitored Domains</string>
+    <string name="ssl_filter_all">All(%1$d)</string>
+    <string name="ssl_filter_expiring">• %1$d Expiring</string>
+    <string name="ssl_filter_expired">• %1$d Expired</string>
+    <string name="ssl_filter_valid">• %1$d Valid</string>
+    <string name="ssl_chip_days_left">%1$d days left</string>
+    <string name="ssl_chip_expired">EXPIRED</string>
+    <string name="ssl_chip_valid">Valid %1$d days</string>
+    <string name="ssl_details_expires">Expires: %1$s • Last check: %2$s</string>
+    <string name="ssl_add_dialog_title">Bulk Add Domains</string>
+    <string name="ssl_add_dialog_desc">Enter domains separated by newline or comma</string>
+    <string name="ssl_check_progress">Checking %1$d/%2$d</string>
+    <string name="ssl_reminder_settings">SSL Reminder Settings</string>
+    <string name="ssl_notification_title">🔔 SSL %1$s in %2$d days!</string>
+    <string name="ssl_notification_expired">❌ SSL %1$s EXPIRED!</string>
+
+    <!-- Password Strength Screen -->
+    <string name="pass_save_success">Saved to Password Manager 🔒</string>
+    <string name="pass_strength_warning">🔒 Passwords are not sent to the server, strength check is 100% offline. Breach check uses k-anonymity (5 char hash only).</string>
+    <string name="pass_input_label">Password</string>
+    <string name="pass_input_placeholder">Enter password</string>
+    <string name="pass_generate">Generate</string>
+    <string name="pass_check_leak">CHECK LEAK</string>
+    <string name="pass_score_label">Strength Score</string>
+    <string name="pass_length">Length</string>
+    <string name="pass_complexity">Complexity</string>
+    <string name="pass_breach_check">Breach Check</string>
+    <string name="pass_suggestions">Suggestions</string>
+    <string name="pass_gen_generating">Generating...</string>
+    <string name="pass_gen_upper">Uppercase (A-Z)</string>
+    <string name="pass_gen_lower">Lowercase (a-z)</string>
+    <string name="pass_gen_numbers">Numbers (0-9)</string>
+    <string name="pass_gen_symbols">Symbols (!@#$)</string>
+    <string name="pass_gen_ambiguous">Exclude Ambiguous (0O1lI)</string>
+    <string name="pass_gen_copy_use">COPY &amp; USE</string>
+    <string name="pass_gen_save">SAVE</string>
+    <string name="pass_gen_memorable">Memorable</string>
+    <string name="pass_crack_time">Crack Time: %1$s</string>
+    <string name="pass_stat_chars">%1$d characters</string>
+    <string name="pass_hibp_fail">Check failed (Offline?)</string>
+    <string name="pass_hibp_clean">CLEAN (HIBP Check)</string>
+    <string name="pass_hibp_found">FOUND %1$d times!</string>
+    <string name="pass_upper">Upper</string>
+    <string name="pass_lower">Lower</string>
+    <string name="pass_number">Number</string>
+    <string name="pass_symbol">Symbol</string>
+
+    <!-- General -->
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_add">Add</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_close">Close</string>
+    <string name="btn_ok">OK</string>
+
+    <!-- Monitoring Lab -->
+    <string name="monitor_add_title">Add New Monitor</string>
+    <string name="monitor_field_host">Hostname / IP</string>
+    <string name="monitor_field_port">Port</string>
+    <string name="monitor_field_url">URL</string>
+    <string name="monitor_field_keyword">Keyword to check (optional)</string>
+    <string name="monitor_interval">Interval: %1$d min</string>
+    <string name="monitor_every">Every %1$d min</string>
+    <string name="monitor_logs_title">Logs: %1$s</string>
+
+    <!-- Stability Test -->
+    <string name="stability_test_summary">Test Summary</string>
+    <string name="stability_stop">STOP STABILITY TEST</string>
+    <string name="stability_start">START STABILITY TEST</string>
+    <string name="stability_avg_latency">Average Latency</string>
+    <string name="stability_max_latency">Max Latency</string>
+    <string name="stability_idle_latency">Idle Latency</string>
+    <string name="stability_loaded_latency">Loaded Latency</string>
+    <string name="stability_bufferbloat">Bufferbloat Δ</string>
+    <string name="stability_success_rate">Success Rate</string>
+    <string name="stability_realtime_graph">Real-time Latency Graph</string>
+    <string name="stability_params">Test Parameters</string>
+    <string name="stability_threads">Concurrency Threads</string>
+    <string name="stability_duration">Duration (Seconds)</string>
+    <string name="stability_target_ip">Target Local IP</string>
+    <string name="stability_download_url">Download Test URL</string>
+
+    <!-- ISP Comparison -->
+    <string name="isp_header_title">ISP in %1$s, ID</string>
+    <string name="isp_best_value">Best Value: %1$s</string>
+    <string name="isp_tab_comparison">Comparison</string>
+    <string name="isp_tab_reviews">Reviews</string>
+    <string name="isp_source_data">Source: Community reviews &amp; </string>
+    <string name="isp_btn_detail">VIEW DETAIL</string>
+    <string name="isp_empty_reviews">No reviews for this ISP yet</string>
+    <string name="isp_btn_rate">Rate for %1$s</string>
+    <string name="isp_rate_title">Rate %1$s</string>
+    <string name="isp_field_comment">Your comment...</string>
+    <string name="isp_pros">Pros</string>
+    <string name="isp_cons">Cons</string>
+    <string name="isp_disclaimer">Performance data is based on average speed test in %1$s area.</string>
+
+    <!-- Password Manager -->
+    <string name="pass_manager_title">Password Manager</string>
+    <string name="pass_stat_saved">%1$d Saved</string>
+    <string name="pass_stat_weak">%1$d Weak</string>
+    <string name="pass_stat_breached">%1$d Breached</string>
+    <string name="pass_search_hint">Search apps...</string>
+    <string name="pass_empty_list">No passwords saved yet</string>
+    <string name="pass_updated_date">Updated %1$s</string>
+    <string name="pass_save_title">Save to Password Manager</string>
+    <string name="pass_field_app_name">App Name</string>
+    <string name="pass_field_username">Username / Email</string>
+    <string name="pass_field_notes">Notes (Optional)</string>
+    <string name="pass_btn_save">SAVE</string>
     <string name="blacklist_check_desc">Check if IP is listed in major DNSBLs</string>
     <string name="blacklist_btn_check_my_ip">Check My IP</string>
     <string name="blacklist_btn_check">CHECK</string>
@@ -53,7 +496,7 @@
     <string name="scan_mdns">mDNS Scanner</string>
     <string name="scan_channel_graph">Channel Graph</string>
     <string name="scan_upnp">UPnP Scanner</string>
-    <string name="scan_snmp">SNMP Scanner</string>
+    <string name="scan_snmp">SNMP Scanner / Discovery</string>
     <string name="wifi_detail">WiFi Detail</string>
     <string name="cellular_detail">Cellular Detail</string>
 
@@ -62,6 +505,7 @@
     <string name="util_whois">Whois &amp; IP Info</string>
     <string name="util_http">HTTP Header</string>
     <string name="util_http_lab">API Tester / HTTP Lab</string>
+    <string name="util_monitoring_lab">Monitoring Lab</string>
     <string name="util_wol">Wake on LAN</string>
     <string name="util_quick_notes">Quick Notes / IP Book</string>
     <string name="util_eng_tools">Engineer Tools</string>
@@ -87,6 +531,8 @@
     <string name="eng_telnet">Telnet Client</string>
     <string name="eng_sftp">SFTP Client</string>
     <string name="eng_tftp">TFTP Client</string>
+    <string name="eng_serial">Serial Console</string>
+    <string name="eng_serial_desc">USB OTG RS-232 direct console</string>
     <string name="eng_terminal">Terminal</string>
     <string name="eng_save_session">Save Session</string>
     <string name="eng_key_auth">Key Authentication</string>

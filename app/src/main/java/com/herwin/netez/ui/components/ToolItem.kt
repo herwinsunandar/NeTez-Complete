@@ -1,34 +1,39 @@
 package com.herwin.netez.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.herwin.netez.ui.AppIcons
 
 @Composable
 fun ToolItem(
     title: String, 
     subtitle: String, 
-    icon: ImageVector, 
+    painter: Painter, 
     showBadge: Boolean = false,
+    badgeText: String = "NEW",
+    isError: Boolean = false,
+    showDot: Boolean = false,
+    dotColor: Color = Color(0xFF10B981),
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
-        color = Color(0xFF1E2235), // SoftDarkBg
+        color = Color(0xFF1E2235),
+        border = if (isError) BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)) else null,
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -38,7 +43,6 @@ fun ToolItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon in Circle
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -47,7 +51,7 @@ fun ToolItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    icon, 
+                    painter = painter, 
                     contentDescription = null, 
                     tint = Color(0xFF6C8CFF),
                     modifier = Modifier.size(28.dp)
@@ -68,17 +72,27 @@ fun ToolItem(
                     if (showBadge) {
                         Spacer(Modifier.width(8.dp))
                         Surface(
-                            color = Color(0xFF6C8CFF),
+                            color = if (isError) Color(0xFFEF4444) else Color(0xFF6C8CFF),
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
-                                "NEW", 
+                                badgeText, 
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 color = Color.White,
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.Black
                             )
                         }
+                    }
+                    
+                    if (showDot) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(dotColor)
+                        )
                     }
                 }
                 Spacer(Modifier.height(2.dp))
@@ -91,7 +105,7 @@ fun ToolItem(
             }
             
             Icon(
-                Icons.Default.ChevronRight,
+                painter = AppIcons.chevronRight(),
                 contentDescription = null,
                 tint = Color(0xFF4B516E),
                 modifier = Modifier.size(20.dp)

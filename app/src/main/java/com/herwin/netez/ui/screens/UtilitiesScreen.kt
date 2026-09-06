@@ -3,8 +3,6 @@ package com.herwin.netez.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,7 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.herwin.netez.R
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.components.ToolItem
+import com.herwin.netez.ui.theme.PremiumNavy
 
 @Composable
 fun UtilitiesScreen(
@@ -22,18 +22,27 @@ fun UtilitiesScreen(
     onNavigateToHttp: () -> Unit,
     onNavigateToHttpLab: () -> Unit,
     onNavigateToWol: () -> Unit,
-    onNavigateToEngTools: () -> Unit
+    onNavigateToEngTools: () -> Unit,
+    onNavigateToMonitoring: () -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(com.herwin.netez.ui.theme.PremiumNavy),
+        modifier = Modifier.fillMaxSize().background(PremiumNavy),
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             ToolItem(
+                title = stringResource(R.string.util_monitoring_lab),
+                subtitle = "Monitor hosts and services in real-time",
+                painter = AppIcons.monitor(),
+                onClick = onNavigateToMonitoring
+            )
+        }
+        item {
+            ToolItem(
                 title = stringResource(R.string.util_http_lab),
                 subtitle = "API Tester & HTTP Request tool",
-                icon = Icons.Default.RocketLaunch,
+                painter = AppIcons.rocket(),
                 onClick = onNavigateToHttpLab
             )
         }
@@ -41,7 +50,7 @@ fun UtilitiesScreen(
             ToolItem(
                 title = stringResource(R.string.util_quick_notes),
                 subtitle = "IP Book & Secure network notes",
-                icon = Icons.Default.StickyNote2,
+                painter = AppIcons.stickyNote(),
                 onClick = onNavigateToQuickNotes
             )
         }
@@ -49,7 +58,7 @@ fun UtilitiesScreen(
             ToolItem(
                 title = stringResource(R.string.util_eng_tools),
                 subtitle = "SSH, Telnet, SFTP & TFTP Clients",
-                icon = Icons.Default.Terminal,
+                painter = AppIcons.terminal(),
                 onClick = onNavigateToEngTools
             )
         }
@@ -57,7 +66,7 @@ fun UtilitiesScreen(
             ToolItem(
                 title = stringResource(R.string.util_ip_calc),
                 subtitle = "Subnetting calculator",
-                icon = Icons.Default.Calculate,
+                painter = AppIcons.calculate(),
                 onClick = onNavigateToIpCalc
             )
         }
@@ -65,7 +74,7 @@ fun UtilitiesScreen(
             ToolItem(
                 title = stringResource(R.string.util_whois),
                 subtitle = "IP Info & Domain lookup",
-                icon = Icons.Default.Info,
+                painter = AppIcons.info(),
                 onClick = onNavigateToWhois
             )
         }
@@ -73,7 +82,7 @@ fun UtilitiesScreen(
             ToolItem(
                 title = stringResource(R.string.util_http),
                 subtitle = "Check HTTP headers & status",
-                icon = Icons.Default.Http,
+                painter = AppIcons.httpHeader(),
                 onClick = onNavigateToHttp
             )
         }
@@ -81,7 +90,7 @@ fun UtilitiesScreen(
             ToolItem(
                 title = stringResource(R.string.util_wol),
                 subtitle = "Wake up devices on network",
-                icon = Icons.Default.Power,
+                painter = AppIcons.power(),
                 onClick = onNavigateToWol
             )
         }

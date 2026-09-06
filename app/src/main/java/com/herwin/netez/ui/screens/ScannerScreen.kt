@@ -3,8 +3,6 @@ package com.herwin.netez.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.herwin.netez.R
+import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.components.ToolItem
 import com.herwin.netez.ui.theme.PremiumNavy
 
@@ -26,7 +25,6 @@ fun ScannerScreen(
     onNavigateToMdns: () -> Unit,
     onNavigateToChannel: () -> Unit,
     onNavigateToUpnp: () -> Unit = {},
-    onNavigateToWol: () -> Unit = {},
     onNavigateToSnmp: () -> Unit = {}
 ) {
     LazyColumn(
@@ -34,7 +32,7 @@ fun ScannerScreen(
             .fillMaxSize()
             .background(PremiumNavy)
             .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(top = 20.dp, bottom = 100.dp), // Extra bottom padding for navigation
+        contentPadding = PaddingValues(top = 20.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // DISCOVERY SECTION
@@ -44,25 +42,25 @@ fun ScannerScreen(
                 ToolItem(
                     title = stringResource(R.string.scan_lan),
                     subtitle = "Scan and identify all devices in local network",
-                    icon = Icons.Default.Lan,
+                    painter = AppIcons.lan(),
                     onClick = onNavigateToLan
                 )
                 ToolItem(
                     title = stringResource(R.string.scan_port),
                     subtitle = "Find open ports and services on any IP",
-                    icon = Icons.Default.Build,
+                    painter = AppIcons.build(),
                     onClick = onNavigateToPort
                 )
                 ToolItem(
                     title = stringResource(R.string.scan_bluetooth),
                     subtitle = "Discover nearby BLE and classic devices",
-                    icon = Icons.Default.Bluetooth,
+                    painter = AppIcons.bluetooth(),
                     onClick = onNavigateToBluetooth
                 )
                 ToolItem(
                     title = stringResource(R.string.scan_mdns),
                     subtitle = "Lookup local services using multicast DNS",
-                    icon = Icons.Default.Search,
+                    painter = AppIcons.search(),
                     onClick = onNavigateToMdns
                 )
             }
@@ -75,13 +73,13 @@ fun ScannerScreen(
                 ToolItem(
                     title = stringResource(R.string.scan_wifi),
                     subtitle = "Analyze signal quality and network details",
-                    icon = Icons.Default.Radar,
+                    painter = AppIcons.wifiAnalyzer(),
                     onClick = onNavigateToWifi
                 )
                 ToolItem(
                     title = stringResource(R.string.scan_channel_graph),
                     subtitle = "Visualize channel interference in real-time",
-                    icon = Icons.Default.AutoGraph,
+                    painter = AppIcons.channelGraph(),
                     onClick = onNavigateToChannel
                 )
             }
@@ -94,19 +92,13 @@ fun ScannerScreen(
                 ToolItem(
                     title = stringResource(R.string.scan_upnp),
                     subtitle = "Scan for UPnP enabled devices and mappings",
-                    icon = Icons.Default.Router,
+                    painter = AppIcons.router(),
                     onClick = onNavigateToUpnp
-                )
-                ToolItem(
-                    title = stringResource(R.string.util_wol),
-                    subtitle = "Send magic packets to wake up remote hosts",
-                    icon = Icons.Default.PowerSettingsNew,
-                    onClick = onNavigateToWol
                 )
                 ToolItem(
                     title = stringResource(R.string.scan_snmp),
                     subtitle = "Query SNMP devices for management info",
-                    icon = Icons.Default.Memory,
+                    painter = AppIcons.memory(),
                     onClick = onNavigateToSnmp
                 )
             }

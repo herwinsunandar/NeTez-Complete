@@ -25,7 +25,8 @@ fun ResultRow(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    isSelectable: Boolean = true
+    isSelectable: Boolean = true,
+    showCopyIcon: Boolean = true
 ) {
     val context = LocalContext.current
     val textGray = Color(0xFF94A3B8)
@@ -53,18 +54,20 @@ fun ResultRow(
             )
         }
         
-        Icon(
-            imageVector = Icons.Default.ContentCopy,
-            contentDescription = "Copy",
-            tint = copyIconColor,
-            modifier = Modifier
-                .size(18.dp)
-                .clickable {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val clip = ClipData.newPlainText(label, value)
-                    clipboard.setPrimaryClip(clip)
-                    Toast.makeText(context, "Copied: $value", Toast.LENGTH_SHORT).show()
-                }
-        )
+        if (showCopyIcon) {
+            Icon(
+                imageVector = Icons.Default.ContentCopy,
+                contentDescription = "Copy",
+                tint = copyIconColor,
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText(label, value)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Copied: $value", Toast.LENGTH_SHORT).show()
+                    }
+            )
+        }
     }
 }

@@ -18,6 +18,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val language: StateFlow<String> = settingsManager.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
 
+    val abuseIpDbKey: StateFlow<String> = settingsManager.abuseIpDbKey
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val shodanKey: StateFlow<String> = settingsManager.shodanKey
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     fun setThemeMode(mode: String) {
         viewModelScope.launch {
             settingsManager.setThemeMode(mode)
@@ -27,6 +33,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setLanguage(lang: String) {
         viewModelScope.launch {
             settingsManager.setLanguage(lang)
+        }
+    }
+
+    fun setAbuseIpDbKey(key: String) {
+        viewModelScope.launch {
+            settingsManager.setAbuseIpDbKey(key)
+        }
+    }
+
+    fun setShodanKey(key: String) {
+        viewModelScope.launch {
+            settingsManager.setShodanKey(key)
         }
     }
 }

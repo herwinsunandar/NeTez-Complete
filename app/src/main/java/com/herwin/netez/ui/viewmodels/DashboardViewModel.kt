@@ -1,9 +1,12 @@
 package com.herwin.netez.ui.viewmodels
 
 import android.app.Application
+import android.net.TrafficStats
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.utils.NetworkUtils
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -26,26 +29,68 @@ data class DashboardState(
     val currentDownRate: Long = 0,
     val currentUpRate: Long = 0,
     val todayDownBytes: Long = 0,
-    val todayUpBytes: Long = 0
+    val todayUpBytes: Long = 0,
+    val activeMonitors: Int = 0,
+    val expiringSslCount: Int = 0,
+    val breachedEmailCount: Int = 0,
+    val phishingUrlCount: Int = 0
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
+    private val database = AppDatabase.getDatabase(application)
+    private val dao = database.monitoringDao()
     private val _uiState = MutableStateFlow(DashboardState())
     val uiState: StateFlow<DashboardState> = _uiState
 
-    private var lastRxBytes = android.net.TrafficStats.getTotalRxBytes()
-    private var lastTxBytes = android.net.TrafficStats.getTotalTxBytes()
+    private var lastRxBytes = TrafficStats.getTotalRxBytes()
+    private var lastTxBytes = TrafficStats.getTotalTxBytes()
 
     init {
         refresh()
         startUsageMonitoring()
+        observeMonitoring()
+        observeSslReminders()
+        observeLeakChecks()
+        observePhishing()
+    }
+
+    private fun observePhishing() {
+        viewModelScope.launch {
+            database.phishingDao().getPhishingCount().collect { count ->
+                _uiState.value = _uiState.value.copy(phishingUrlCount = count)
+            }
+        }
+    }
+
+    private fun observeMonitoring() {
+        viewModelScope.launch {
+            dao.getActiveCount().collect { count ->
+                _uiState.value = _uiState.value.copy(activeMonitors = count)
+            }
+        }
+    }
+
+    private fun observeSslReminders() {
+        viewModelScope.launch {
+            database.sslDomainDao().getExpiringCount().collect { count ->
+                _uiState.value = _uiState.value.copy(expiringSslCount = count)
+            }
+        }
+    }
+
+    private fun observeLeakChecks() {
+        viewModelScope.launch {
+            database.leakCheckDao().getBreachedCount().collect { count ->
+                _uiState.value = _uiState.value.copy(breachedEmailCount = count)
+            }
+        }
     }
 
     private fun startUsageMonitoring() {
         viewModelScope.launch {
             while (true) {
-                val currentRx = android.net.TrafficStats.getTotalRxBytes()
-                val currentTx = android.net.TrafficStats.getTotalTxBytes()
+                val currentRx = TrafficStats.getTotalRxBytes()
+                val currentTx = TrafficStats.getTotalTxBytes()
                 
                 val rxRate = if (lastRxBytes > 0) (currentRx - lastRxBytes).coerceAtLeast(0) else 0
                 val txRate = if (lastTxBytes > 0) (currentTx - lastTxBytes).coerceAtLeast(0) else 0
@@ -66,8 +111,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     todayDownBytes = _uiState.value.todayDownBytes + rxRate,
                     todayUpBytes = _uiState.value.todayUpBytes + txRate
                 )
-                
-                kotlinx.coroutines.delay(1000)
+
+                delay(1000)
             }
         }
     }

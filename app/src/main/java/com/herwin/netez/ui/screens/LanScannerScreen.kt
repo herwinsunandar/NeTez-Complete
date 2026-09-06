@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,21 +19,25 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.herwin.netez.R
 import com.herwin.netez.network.Device
+import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.ResultRow
 import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
@@ -47,10 +52,52 @@ import java.util.*
 fun LanScannerScreen(
     viewModel: LanScannerViewModel = viewModel(),
     onNavigateToPing: (String) -> Unit = {},
-    onNavigateToPortScan: (String) -> Unit = {}
+    onNavigateToPortScan: (String) -> Unit = {},
+    onNavigateToWifiAudit: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    
+    var showIdentifyDialog by remember { mutableStateOf(false) }
+    var selectedMacToIdentify by remember { mutableStateOf("") }
+
+    if (showIdentifyDialog) {
+        var customLabel by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showIdentifyDialog = false },
+            containerColor = SoftDarkBg,
+            title = { Text("Identify Device", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Manually label this device (MAC: $selectedMacToIdentify)", color = TextGray, fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = customLabel,
+                        onValueChange = { customLabel = it },
+                        placeholder = { Text("e.g. Living Room TV", color = TextGray) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedTextColor = Color.White,
+                            focusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF6C8CFF)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.saveVendorOverride(selectedMacToIdentify, customLabel)
+                    showIdentifyDialog = false
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showIdentifyDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -115,11 +162,11 @@ fun LanScannerScreen(
                         )
                     ) {
                         if (uiState.isScanning) {
-                            Icon(Icons.Default.Stop, null)
+                            Icon(AppIcons.stop(), null)
                             Spacer(Modifier.width(8.dp))
                             Text("STOP", fontWeight = FontWeight.Bold)
                         } else {
-                            Icon(Icons.Default.Radar, null)
+                            Icon(AppIcons.scan(), null)
                             Spacer(Modifier.width(8.dp))
                             Text("SCAN", fontWeight = FontWeight.Bold)
                         }
@@ -134,11 +181,31 @@ fun LanScannerScreen(
                             color = Color(0xFF6C8CFF),
                             trackColor = Color.White.copy(alpha = 0.05f)
                         )
-                        Text(
-                            "Scanning... ${(uiState.progress * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextGray
-                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                uiState.progressText.ifEmpty { "Scanning... ${(uiState.progress * 100).toInt()}%" },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextGray
+                            )
+                            uiState.ispInfo?.let { 
+                                Text(it, style = MaterialTheme.typography.labelSmall, color = Color(0xFF6C8CFF))
+                            }
+                        }
+                    }
+                } else {
+                    // Show ISP Info when not scanning
+                    uiState.ispInfo?.let {
+                        Surface(
+                            color = Color(0xFF6C8CFF).copy(alpha = 0.05f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(AppIcons.public(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(it, color = TextGray, fontSize = 11.sp)
+                            }
+                        }
                     }
                 }
             }
@@ -150,6 +217,21 @@ fun LanScannerScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
         ) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().clickable { onNavigateToWifiAudit() },
+                    color = Color(0xFFEF4444).copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.2f))
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(AppIcons.warning(), null, tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text("⚠️ WiFi tidak aman - Tap untuk audit keamanan", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
             if (uiState.devices.isNotEmpty()) {
                 item {
                     Row(
@@ -157,7 +239,27 @@ fun LanScannerScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Action Icons (Copy & Share)
+                        if (uiState.devices.isNotEmpty()) {
+                            IconButton(onClick = { 
+                                viewModel.copyResultsToClipboard(context)
+                                Toast.makeText(context, "Results copied", Toast.LENGTH_SHORT).show()
+                            }, modifier = Modifier.size(32.dp)) {
+                                Icon(AppIcons.contentCopy(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(20.dp))
+                            }
+                            IconButton(onClick = { viewModel.shareResults(context) }, modifier = Modifier.size(32.dp)) {
+                                Icon(AppIcons.share(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(20.dp))
+                            }
+                            VerticalDivider(modifier = Modifier.height(20.dp).padding(horizontal = 4.dp), color = Color.White.copy(alpha = 0.1f))
+                        }
+
+                        val listedCount = uiState.devices.count { it.riskScore > 0 }
+                        
                         LanFilterChip("All (${uiState.devices.size})", uiState.filter == LanFilter.ALL) { viewModel.updateFilter(LanFilter.ALL) }
+                        
+                        SummaryMiniChip("${uiState.devices.count { it.isOnline }} Clean", Color(0xFF10B981))
+                        SummaryMiniChip("${uiState.devices.count { it.riskScore > 0 }} Listed", if (listedCount > 0) Color(0xFFEF4444) else TextGray)
+                        
                         LanFilterChip("Phone", uiState.filter == LanFilter.PHONE) { viewModel.updateFilter(LanFilter.PHONE) }
                         LanFilterChip("PC", uiState.filter == LanFilter.PC) { viewModel.updateFilter(LanFilter.PC) }
                         LanFilterChip("Router", uiState.filter == LanFilter.ROUTER) { viewModel.updateFilter(LanFilter.ROUTER) }
@@ -170,26 +272,19 @@ fun LanScannerScreen(
             items(uiState.filteredDevices) { device ->
                 DeviceProCard(
                     device = device,
+                    vendorMap = uiState.vendorMap,
+                    isScanningPorts = uiState.portScanningDevices.contains(device.ip),
                     onPing = { onNavigateToPing(it) },
                     onPorts = { viewModel.togglePortScan(it) },
                     onInfo = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://${device.ip}"))
                         context.startActivity(intent)
+                    },
+                    onIdentify = { 
+                        selectedMacToIdentify = it
+                        showIdentifyDialog = true
                     }
                 )
-            }
-
-            if (uiState.devices.isNotEmpty() && !uiState.isScanning) {
-                item {
-                    com.herwin.netez.ui.components.ResultFooter(
-                        fullTextToCopy = uiState.devices.joinToString("\n") { "${it.ip} - ${it.hostname} (${it.mac})" },
-                        onCopyAll = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("LAN Devices", uiState.devices.joinToString("\n") { "${it.ip} - ${it.hostname}" }))
-                            android.widget.Toast.makeText(context, "Device list copied", android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                }
             }
         }
     }
@@ -216,11 +311,33 @@ fun InputField(value: String, placeholder: String, onValueChange: (String) -> Un
 }
 
 @Composable
+fun SummaryMiniChip(label: String, color: Color) {
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.2f)),
+        modifier = Modifier.height(32.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(color))
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
 fun DeviceProCard(
     device: Device,
+    vendorMap: Map<String, String>,
+    isScanningPorts: Boolean,
     onPing: (String) -> Unit,
     onPorts: (String) -> Unit,
-    onInfo: (String) -> Unit
+    onInfo: (String) -> Unit,
+    onIdentify: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -230,7 +347,7 @@ fun DeviceProCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = SoftDarkBg,
-        border = if (expanded) borderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.3f)) else null
+        border = if (expanded) BorderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.3f)) else null
     ) {
         Column(modifier = Modifier.clickable { expanded = !expanded }.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -243,7 +360,7 @@ fun DeviceProCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = getProDeviceIcon(device.deviceType),
+                        painter = painterResource(getProDeviceIcon(device.deviceType)),
                         contentDescription = null,
                         tint = if (device.isOnline) Color.White else TextGray,
                         modifier = Modifier.size(28.dp)
@@ -265,59 +382,112 @@ fun DeviceProCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(device.ip, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                        if (device.isThisDevice) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(color = Color(0xFF10B981).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                                Text("THIS DEVICE", color = Color(0xFF10B981), fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                            }
+                        }
                         if (device.isGateway) {
                             Spacer(Modifier.width(8.dp))
                             Surface(color = Color(0xFF6C8CFF).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
                                 Text("GW", color = Color(0xFF6C8CFF), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
                             }
                         }
+                        if (device.isRandomMac) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(color = Color(0xFFFBBF24).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                                Text("PRV", color = Color(0xFFFBBF24), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+                            }
+                        }
                     }
-                    Text(device.hostname, style = MaterialTheme.typography.bodySmall, color = TextGray)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(getOsIcon(device.os, device.deviceType), null, tint = TextGray, modifier = Modifier.size(12.dp))
+                    
+                    val displayVendor = when {
+                        device.isThisDevice -> device.vendor
+                        device.vendor != "Unknown" && device.vendor != "Unknown Vendor" -> device.vendor
+                        else -> "Unknown Vendor"
+                    }
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "${device.os} • ${device.connectionType}${device.signalStrength?.let { " • $it" } ?: ""}", 
-                            style = MaterialTheme.typography.labelSmall, 
-                            color = TextGray, 
-                            fontSize = 9.sp
+                            text = displayVendor, 
+                            style = MaterialTheme.typography.bodySmall, 
+                            color = if (displayVendor.contains("Unknown")) TextGray else Color(0xFF6C8CFF),
+                            fontWeight = if (displayVendor.contains("Unknown")) FontWeight.Normal else FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        if (vendorMap.containsKey(device.mac)) {
+                            Spacer(Modifier.width(4.dp))
+                            Surface(color = Color(0xFF6C8CFF).copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                                Text("CUSTOM", color = Color(0xFF6C8CFF), fontSize = 8.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                            }
+                        }
+                        if (device.hostnameSource == "mDNS") {
+                            Spacer(Modifier.width(6.dp))
+                            Icon(AppIcons.link(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(10.dp))
+                        }
                     }
+                    
+                    val displayDetails = listOfNotNull(
+                        if (device.deviceCategory != "Unknown") device.deviceCategory else null,
+                        if (device.deviceType != "Unknown") device.deviceType else null
+                    ).joinToString(" • ")
+
+                    val displayHostname = when {
+                        device.isThisDevice -> device.hostname
+                        device.hostname != "Unknown" && displayDetails.isNotEmpty() -> "${device.hostname} • $displayDetails"
+                        device.hostname != "Unknown" -> device.hostname
+                        displayDetails.isNotEmpty() -> displayDetails
+                        else -> "Unknown Host"
+                    }
+                    
+                    Text(
+                        text = displayHostname, 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = TextGray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 // Right: Latency + Connection Icon
                 Column(horizontalAlignment = Alignment.End) {
                     Icon(
-                        imageVector = if (device.connectionType == "WiFi") Icons.Default.Wifi else Icons.Default.SettingsEthernet,
+                        painter = painterResource(if (device.connectionType == "WiFi") R.drawable.ic_wifi else R.drawable.ic_settings_ethernet),
                         contentDescription = null,
                         tint = TextGray.copy(alpha = 0.5f),
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        "${device.latencyMs}ms",
-                        color = when {
-                            !device.isOnline -> Color.Gray
-                            device.latencyMs < 50 -> Color(0xFF10B981)
-                            device.latencyMs < 150 -> Color(0xFFF59E0B)
-                            else -> Color(0xFFEF4444)
-                        },
-                        fontWeight = FontWeight.Black,
-                        fontSize = 14.sp
-                    )
-                    if (device.openPorts.isNotEmpty()) {
-                        Surface(
-                            color = Color(0xFF10B981).copy(alpha = 0.1f),
-                            shape = CircleShape,
-                            modifier = Modifier.padding(top = 4.dp)
-                        ) {
-                            Text(
-                                "${device.openPorts.size} ports",
-                                color = Color(0xFF10B981),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+                    
+                    val latencyColor = when {
+                        !device.isOnline -> Color.Gray
+                        device.isThisDevice || device.latencyMs == 0L || device.latencyMs > 800 -> Color(0xFF10B981)
+                        device.latencyMs < 300 -> Color(0xFF10B981)
+                        device.latencyMs <= 800 -> Color(0xFFFBBF24)
+                        else -> Color(0xFFEF4444)
+                    }
+                    
+                    val latencyText = when {
+                        !device.isOnline -> "Offline"
+                        device.isThisDevice || device.latencyMs == 0L || device.latencyMs > 800 -> "Cached"
+                        device.hostnameSource == "NetBIOS" -> "NB: ${device.latencyMs}ms"
+                        else -> "${device.latencyMs}ms"
+                    }
+
+                    Surface(
+                        color = latencyColor.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, latencyColor.copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = latencyText,
+                            color = latencyColor,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
                     }
                 }
             }
@@ -329,28 +499,78 @@ fun DeviceProCard(
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                    
-                    com.herwin.netez.ui.components.ResultRow("First Discovered", dateFormat.format(Date(device.firstSeen)))
-                    com.herwin.netez.ui.components.ResultRow("Last Seen", timeFormat.format(Date(device.lastSeen)))
-                    com.herwin.netez.ui.components.ResultRow("TTL", device.ttl.toString())
 
-                    if (device.openPorts.isNotEmpty()) {
-                        Column {
-                            Text("Open Ports", style = MaterialTheme.typography.labelSmall, color = TextGray)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    ResultRow("MAC Address", device.mac)
+                    if (device.isRandomMac) {
+                        Text("Locally Administered Address (Randomized)", color = Color(0xFFFBBF24), fontSize = 10.sp, modifier = Modifier.padding(start = 16.dp))
+                    }
+                    if (!device.isOnline) {
+                        val diff = System.currentTimeMillis() - device.lastSeen
+                        val timeAgo = when {
+                            diff < 60000 -> "Just now"
+                            diff < 3600000 -> "${diff / 60000}m ago"
+                            else -> dateFormat.format(Date(device.lastSeen))
+                        }
+                        ResultRow("Last Seen", timeAgo)
+                    } else {
+                        ResultRow("Last Active", timeFormat.format(Date(device.lastSeen)))
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ActionButton(AppIcons.networkCheck(), "PING", Modifier.weight(1f)) { onPing(device.ip) }
+                        
+                        Button(
+                            onClick = { onPorts(device.ip) },
+                            modifier = Modifier.weight(1f).height(40.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isScanningPorts) Color(0xFF6C8CFF).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(0.dp),
+                            enabled = !isScanningPorts
+                        ) {
+                            if (isScanningPorts) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                            } else {
+                                Icon(AppIcons.search(), null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("PORTS", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        ActionButton(AppIcons.person(), "IDENTIFY", Modifier.weight(1f)) { onIdentify(device.mac) }
+                    }
+
+                    if (device.hasPerformedPortScan || device.openPorts.isNotEmpty()) {
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                        Text("Open Ports", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        
+                        if (device.openPorts.isEmpty()) {
+                            Text("No open ports detected", color = Color(0xFFEF4444).copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        } else {
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 device.openPorts.forEach { port ->
-                                    Surface(color = Color.White.copy(alpha = 0.05f), shape = RoundedCornerShape(4.dp)) {
-                                        Text(port.toString(), color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                    Surface(
+                                        color = Color(0xFF6C8CFF).copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.2f))
+                                    ) {
+                                        Text(
+                                            text = port.toString(),
+                                            color = Color(0xFF6C8CFF),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
                                     }
                                 }
                             }
                         }
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ActionButton(Icons.Default.NetworkCheck, "PING", Modifier.weight(1f)) { onPing(device.ip) }
-                        ActionButton(Icons.Default.Search, "PORTS", Modifier.weight(1f)) { onPorts(device.ip) }
-                        ActionButton(Icons.Default.Info, "INFO", Modifier.weight(1f)) { onInfo(device.ip) }
                     }
                 }
             }
@@ -359,7 +579,7 @@ fun DeviceProCard(
 }
 
 @Composable
-fun ActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+fun ActionButton(painter: Painter, label: String, modifier: Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = modifier.height(40.dp),
@@ -367,7 +587,7 @@ fun ActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: S
         colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f), contentColor = Color.White),
         contentPadding = PaddingValues(0.dp)
     ) {
-        Icon(icon, null, modifier = Modifier.size(16.dp))
+        Icon(painter, null, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
@@ -390,28 +610,16 @@ fun LanFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     )
 }
 
-fun getProDeviceIcon(type: String): androidx.compose.ui.graphics.vector.ImageVector {
+fun getProDeviceIcon(type: String): Int {
     return when (type) {
-        "Router" -> Icons.Default.Router
-        "iPhone" -> Icons.Default.PhoneIphone
-        "Android" -> Icons.Default.PhoneAndroid
-        "PC" -> Icons.Default.Laptop
-        "Mac" -> Icons.Default.DesktopMac
-        "Printer" -> Icons.Default.Print
-        "Smart TV" -> Icons.Default.Tv
-        "IoT" -> Icons.Default.Sensors
-        else -> Icons.Default.Devices
+        "Router" -> R.drawable.ic_router
+        "iPhone" -> R.drawable.ic_phone_iphone
+        "Android" -> R.drawable.ic_phone_android
+        "PC" -> R.drawable.ic_laptop
+        "Mac" -> R.drawable.ic_desktop_mac
+        "Printer" -> R.drawable.ic_print
+        "Smart TV" -> R.drawable.ic_tv
+        "IoT" -> R.drawable.ic_sensors
+        else -> R.drawable.ic_devices
     }
 }
-
-fun getOsIcon(os: String, type: String): androidx.compose.ui.graphics.vector.ImageVector {
-    return when {
-        type == "iPhone" || type == "Mac" -> Icons.Default.PhoneIphone
-        os.contains("Windows") -> Icons.Default.DesktopWindows
-        os.contains("Linux") || os.contains("Android") -> Icons.Default.Terminal
-        os.contains("Cisco") -> Icons.Default.SettingsInputComponent
-        else -> Icons.Default.Info
-    }
-}
-
-fun borderStroke(width: androidx.compose.ui.unit.Dp, color: Color) = androidx.compose.foundation.BorderStroke(width, color)

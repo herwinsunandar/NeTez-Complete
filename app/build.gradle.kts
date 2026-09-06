@@ -6,9 +6,7 @@ plugins {
 
 android {
     namespace = "com.herwin.netez"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.herwin.netez"
@@ -22,19 +20,32 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
+        viewBinding = true
+        buildConfig = true
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -60,14 +71,42 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.cardview)
+    implementation(libs.androidx.coordinatorlayout)
     
-    // Vico Charts
+    // UI components
+    implementation(libs.material)
+    
+    // Vico Charts (Preferred over MPAndroidChart for Compose)
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)
+    implementation(libs.mpandroidchart)
+    
+    // Network
     implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
     implementation(libs.coil.compose)
+    
+    // SSH & Security
     implementation(libs.jsch)
+    implementation(libs.sshj)
+    implementation(libs.bcprov)
+    implementation(libs.bcpkix)
     implementation(libs.commons.net)
+    
+    // Background Tasks
+    implementation(libs.androidx.work.runtime.ktx)
+    
+    // Utilities
+    implementation(libs.zxcvbn)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.sqlcipher)
+    
+
 
     ksp(libs.androidx.room.compiler)
 

@@ -13,6 +13,8 @@ class SettingsManager(private val context: Context) {
     companion object {
         val THEME_KEY = stringPreferencesKey("theme_mode") // "light", "dark", "system"
         val LANGUAGE_KEY = stringPreferencesKey("language") // "en", "in", "system"
+        val ABUSE_IPDB_KEY = stringPreferencesKey("abuse_ipdb_key")
+        val SHODAN_KEY = stringPreferencesKey("shodan_key")
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { preferences ->
@@ -21,6 +23,14 @@ class SettingsManager(private val context: Context) {
 
     val language: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[LANGUAGE_KEY] ?: "system"
+    }
+
+    val abuseIpDbKey: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[ABUSE_IPDB_KEY] ?: ""
+    }
+
+    val shodanKey: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[SHODAN_KEY] ?: ""
     }
 
     suspend fun setThemeMode(mode: String) {
@@ -32,6 +42,18 @@ class SettingsManager(private val context: Context) {
     suspend fun setLanguage(lang: String) {
         context.dataStore.edit { preferences ->
             preferences[LANGUAGE_KEY] = lang
+        }
+    }
+
+    suspend fun setAbuseIpDbKey(key: String) {
+        context.dataStore.edit { preferences ->
+            preferences[ABUSE_IPDB_KEY] = key
+        }
+    }
+
+    suspend fun setShodanKey(key: String) {
+        context.dataStore.edit { preferences ->
+            preferences[SHODAN_KEY] = key
         }
     }
 }
