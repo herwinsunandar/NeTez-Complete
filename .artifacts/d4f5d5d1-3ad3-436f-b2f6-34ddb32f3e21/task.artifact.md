@@ -1,0 +1,9 @@
+- [ ] Add strings to `strings.xml`
+- [ ] Create `AppPermissionInfo.kt` data model
+- [ ] Create `AppScannerManager.kt` for scanning logic
+- [ ] Create `AppPermissionViewModel.kt`
+- [ ] Create `AppPermissionScannerScreen.kt`
+- [ ] Update `Screen.kt` for navigation
+- [ ] Update `NavGraph.kt` to include the new screen
+- [ ] Add entry in `SecurityScreen.kt`
+- [ ] Verify implementation

@@ -1,0 +1,56 @@
+<resources>
+    <!-- Device Security Audit -->
+    <string name="device_check_title">Audit Keamanan Perangkat</string>
+    <string name="device_check_not_scanned">Belum dipindai</string>
+    <string name="device_score">Skor Keamanan</string>
+    <string name="scan_now">Pindai Sekarang</string>
+    <string name="share_report">Bagikan Laporan</string>
+    <string name="status_critical">Kritis</string>
+    <string name="status_warning">Peringatan</string>
+    <string name="status_safe">Aman</string>
+
+    <string name="check_accessibility">Layanan Aksesibilitas</string>
+    <string name="check_android_version">Versi Android</string>
+    <string name="check_biometric">Keamanan Biometrik</string>
+    <string name="check_developer_options">Opsi Pengembang</string>
+    <string name="check_encryption">Enkripsi Perangkat</string>
+    <string name="check_hooking">Framework Hooking</string>
+    <string name="check_play_protect">Status Play Protect</string>
+    <string name="check_root">Akses Root</string>
+    <string name="check_screen_lock">Kunci Layar</string>
+    <string name="check_patch">Patch Keamanan</string>
+    <string name="check_storage">Keamanan Penyimpanan</string>
+    <string name="check_unknown_apps">Sumber Aplikasi Tak Dikenal</string>
+    <string name="check_usb_debugging">Debugging USB</string>
+    <string name="check_verified_boot">Verified Boot</string>
+
+    <!-- DNS Leak Test -->
+    <string name="dns_leak_title">Tes DNS Leak</string>
+    <string name="dns_leak_subtitle">Cek apakah VPN bocor atau ISP memata-matai DNS</string>
+    <string name="dns_leak_status_safe">Tidak Ada Kebocoran 🟢</string>
+    <string name="dns_leak_status_leaking">%1$d Bocor! ISP terlihat 🔴</string>
+    <string name="dns_leak_not_scanned">Belum dipindai</string>
+    <string name="dns_leak_btn_test">TES SEKARANG</string>
+    <string name="dns_leak_btn_what_is">Apa itu DNS Leak?</string>
+
+    <string name="dns_leak_score_title">Skor Kebocoran</string>
+    <string name="dns_leak_summary_all">Semua(%1$d)</string>
+    <string name="dns_leak_summary_leaked">%1$d Bocor 🔴</string>
+    <string name="dns_leak_summary_safe">%1$d Aman 🟢</string>
+    <string name="dns_leak_tested_time">Dites dalam %1$s</string>
+
+    <string name="dns_leak_status_safe_desc">AMAN 🟢 Tidak ada kebocoran DNS terdeteksi. Kueri DNS Anda dirutekan melalui VPN atau resolver aman Anda.</string>
+    <string name="dns_leak_status_warning_desc">PERINGATAN 🟡 Potensi kebocoran DNS terdeteksi. Beberapa kueri mungkin terlihat oleh ISP Anda.</string>
+    <string name="dns_leak_status_critical_desc">KRITIS 🔴 Kebocoran DNS terdeteksi! ISP Anda dapat melihat aktivitas browsing Anda meskipun menggunakan VPN.</string>
+
+    <string name="dns_leak_explanation_title">Apa itu DNS Leak?</string>
+    <string name="dns_leak_explanation_content">Kebocoran DNS terjadi ketika kueri DNS Anda dikirim ke server DNS ISP Anda, bukan ke server DNS anonim yang disediakan oleh VPN Anda. Ini memungkinkan ISP Anda melihat setiap situs web yang Anda kunjungi, bahkan jika Anda menggunakan VPN.\n\nUntuk memperbaikinya, pastikan VPN Anda mengaktifkan "DNS Leak Protection" atau atur DNS Pribadi yang aman seperti Cloudflare (1.1.1.1) secara manual.</string>
+
+    <string name="dns_leak_card_leaked">BOCOR 🔴 - VPN Aktif tetapi DNS adalah ISP: %1$s - ISP Anda dapat melihat browsing Anda!</string>
+    <string name="dns_leak_card_info_no_vpn">Tidak Ada VPN - ISP dapat melihat kueri DNS - Pertimbangkan menggunakan VPN + 1.1.1.1</string>
+    <string name="dns_leak_card_safe">AMAN 🟢 - Menggunakan %1$s</string>
+    <string name="dns_leak_detail_line">Amerika Serikat • Diselesaikan dalam %1$dms • Aman 🟢</string>
+    <string name="dns_leak_see_browsing">DNS ini dapat melihat aktivitas browsing Anda</string>
+
+    <string name="dns_leak_share_report">Tes DNS Leak: %1$d bocor • DNS: %2$s • ISP: %3$s • VPN: %4$s • via NeTez</string>
+</resources>

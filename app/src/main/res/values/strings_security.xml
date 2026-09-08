@@ -1,0 +1,56 @@
+<resources>
+    <!-- Device Security Audit -->
+    <string name="device_check_title">Device Security Check</string>
+    <string name="device_check_not_scanned">Not scanned</string>
+    <string name="device_score">Security Score</string>
+    <string name="scan_now">Scan Now</string>
+    <string name="share_report">Share Report</string>
+    <string name="status_critical">Critical</string>
+    <string name="status_warning">Warning</string>
+    <string name="status_safe">Safe</string>
+
+    <string name="check_accessibility">Accessibility Services</string>
+    <string name="check_android_version">Android Version</string>
+    <string name="check_biometric">Biometric Security</string>
+    <string name="check_developer_options">Developer Options</string>
+    <string name="check_encryption">Device Encryption</string>
+    <string name="check_hooking">Hooking Frameworks</string>
+    <string name="check_play_protect">Play Protect Status</string>
+    <string name="check_root">Root Access</string>
+    <string name="check_screen_lock">Screen Lock</string>
+    <string name="check_patch">Security Patch</string>
+    <string name="check_storage">Storage Security</string>
+    <string name="check_unknown_apps">Unknown App Sources</string>
+    <string name="check_usb_debugging">USB Debugging</string>
+    <string name="check_verified_boot">Verified Boot</string>
+
+    <!-- DNS Leak Test -->
+    <string name="dns_leak_title">DNS Leak Test</string>
+    <string name="dns_leak_subtitle">Check if VPN leaks or ISP spies DNS</string>
+    <string name="dns_leak_status_safe">No Leak 🟢</string>
+    <string name="dns_leak_status_leaking">%1$d Leaks! ISP visible 🔴</string>
+    <string name="dns_leak_not_scanned">Not scanned</string>
+    <string name="dns_leak_btn_test">TEST NOW</string>
+    <string name="dns_leak_btn_what_is">What is DNS Leak?</string>
+
+    <string name="dns_leak_score_title">Leak Score</string>
+    <string name="dns_leak_summary_all">All(%1$d)</string>
+    <string name="dns_leak_summary_leaked">%1$d Leaked 🔴</string>
+    <string name="dns_leak_summary_safe">%1$d Safe 🟢</string>
+    <string name="dns_leak_tested_time">Tested in %1$s</string>
+
+    <string name="dns_leak_status_safe_desc">SAFE 🟢 No DNS leak detected. Your DNS queries are routed through your VPN or secure resolver.</string>
+    <string name="dns_leak_status_warning_desc">WARNING 🟡 Potential DNS leak detected. Some queries might be visible to your ISP.</string>
+    <string name="dns_leak_status_critical_desc">CRITICAL 🔴 DNS Leak detected! Your ISP can see your browsing activity even when using a VPN.</string>
+
+    <string name="dns_leak_explanation_title">What is a DNS Leak?</string>
+    <string name="dns_leak_explanation_content">A DNS leak occurs when your DNS queries are sent to your ISP\'s DNS servers instead of the anonymous DNS servers provided by your VPN. This allows your ISP to see every website you visit, even if you are using a VPN.\n\nTo fix this, ensure your VPN has "DNS Leak Protection" enabled or manually set a secure Private DNS like Cloudflare (1.1.1.1).</string>
+
+    <string name="dns_leak_card_leaked">LEAKED 🔴 - VPN ON but DNS is ISP: %1$s - Your ISP can see browsing even with VPN!</string>
+    <string name="dns_leak_card_info_no_vpn">No VPN - ISP can see DNS queries - Consider using VPN + 1.1.1.1</string>
+    <string name="dns_leak_card_safe">SAFE 🟢 - Using %1$s</string>
+    <string name="dns_leak_detail_line">United States • Resolved in %1$dms • Safe 🟢</string>
+    <string name="dns_leak_see_browsing">This DNS can see your browsing</string>
+
+    <string name="dns_leak_share_report">DNS Leak Test: %1$d leaks • DNS: %2$s • ISP: %3$s • VPN: %4$s • via NeTez</string>
+</resources>

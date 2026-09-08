@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="security_score">%1$d/100</string>
+    <string name="security_status_good">Good</string>
+    <string name="security_status_excellent">Excellent</string>
+    <string name="security_status_fair">Fair</string>
+    <string name="security_status_poor">Poor</string>
+    <string name="security_issues">%1$d Issues • %2$s</string>
+    <string name="view">View</string>
+    <string name="wifi_network">WiFi Network</string>
+    <string name="local_ip">LOCAL IP</string>
+    <string name="public_ip">PUBLIC IP</string>
+    <string name="gateway">GATEWAY</string>
+    <string name="isp">ISP</string>
+    <string name="device_security">Device</string>
+    <string name="network_security">Network</string>
+    <string name="app_security">App</string>
+    <string name="privacy_security">Privacy</string>
+</resources>

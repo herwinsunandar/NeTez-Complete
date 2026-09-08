@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="security_score">%1$d/100</string>
+    <string name="security_status_good">Baik</string>
+    <string name="security_status_excellent">Sangat Baik</string>
+    <string name="security_status_fair">Cukup</string>
+    <string name="security_status_poor">Buruk</string>
+    <string name="security_issues">%1$d Masalah • %2$s</string>
+    <string name="view">Lihat</string>
+    <string name="wifi_network">Jaringan WiFi</string>
+    <string name="local_ip">IP LOKAL</string>
+    <string name="public_ip">IP PUBLIK</string>
+    <string name="gateway">GATEWAY</string>
+    <string name="isp">ISP</string>
+    <string name="device_security">Perangkat</string>
+    <string name="network_security">Jaringan</string>
+    <string name="app_security">Aplikasi</string>
+    <string name="privacy_security">Privasi</string>
+</resources>
