@@ -24,6 +24,10 @@ import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.*
 
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureAccessState
+import com.herwin.netez.entitlement.FeatureId
+
 class LeakCheckViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     private val leakDao = db.leakCheckDao()
@@ -34,10 +38,13 @@ class LeakCheckViewModel(application: Application) : AndroidViewModel(applicatio
     var scanProgress by mutableStateOf(Pair(0, 0))
     var breachedSoFar by mutableStateOf(0)
     var batchResults = mutableStateListOf<LeakCheckResult>()
-    
+
     var csvPreviewList = mutableStateListOf<CsvEmail>()
     var csvInvalidCount by mutableIntStateOf(0)
     var showCsvPreview by mutableStateOf(false)
+    var showPaywallDialog by mutableStateOf(false)
+    var showGlobalSupportDialog by mutableStateOf(false)
+    var paywallText by mutableStateOf("")
 
     val history = leakDao.getAllLeakChecks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -64,6 +71,13 @@ class LeakCheckViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun parseCsvFile(uri: Uri) {
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        if (!accessManager.isPro()) {
+            paywallText = "Bulk CSV Email Leak Check is available in NeTez PRO."
+            showPaywallDialog = true
+            return
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val inputStream = getApplication<Application>().contentResolver.openInputStream(uri)
@@ -101,6 +115,15 @@ class LeakCheckViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun startBatchCheck(emails: List<CsvEmail>) {
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        val accessState = accessManager.checkAccess(FeatureId.LEAK_CHECK_DAILY)
+        if (accessState == FeatureAccessState.LIMIT_REACHED) {
+            paywallText = "Free plan supports up to 3 email leak checks per day. Upgrade to NeTez PRO or watch an ad to get +1 bonus check."
+            showPaywallDialog = true
+            return
+        }
+        accessManager.consumeQuota(FeatureId.LEAK_CHECK_DAILY)
+
         viewModelScope.launch {
             isScanning = true
             batchResults.clear()
@@ -110,6 +133,9 @@ class LeakCheckViewModel(application: Application) : AndroidViewModel(applicatio
             val results = checkMultiple(emails)
             batchResults.addAll(results)
             isScanning = false
+            if (accessManager.trackAndCheckGlobalToolUsage()) {
+                showGlobalSupportDialog = true
+            }
         }
     }
 

@@ -53,4 +53,70 @@
     <string name="dns_leak_see_browsing">DNS ini dapat melihat aktivitas browsing Anda</string>
 
     <string name="dns_leak_share_report">Tes DNS Leak: %1$d bocor • DNS: %2$s • ISP: %3$s • VPN: %4$s • via NeTez</string>
+
+    <!-- SSL/TLS Lab -->
+    <string name="ssltls_lab_title">SSL/TLS Monitor</string>
+    <string name="ssltls_tab_my_domains">Domain Saya</string>
+    <string name="ssltls_tab_instant_check">Cek Seketika</string>
+    <string name="ssltls_input_hint">https://example.com</string>
+    <string name="ssltls_btn_check">CEK SEKARANG</string>
+    <string name="ssltls_empty_my_domains">Belum ada domain dipantau - Tambahkan domain Anda untuk mendapatkan peringatan kedaluwarsa + grade TLS</string>
+    <string name="ssltls_empty_instant_check">Masukkan domain untuk memeriksa sertifikat, versi TLS, cipher suite, kerentanan, dan grade</string>
+    <string name="ssltls_card_cert_title">Detail Sertifikat</string>
+    <string name="ssltls_card_tls_title">Versi TLS Didukung</string>
+    <string name="ssltls_card_cipher_title">Cipher Suites &amp; Enkripsi</string>
+    <string name="ssltls_card_chain_title">Rantai Sertifikat</string>
+    <string name="ssltls_card_vuln_title">Pindaian Kerentanan</string>
+    <string name="ssltls_card_grade_title">Grade Keamanan SSL</string>
+    <string name="ssltls_btn_add_to_my_domains">Tambah ke Domain Saya</string>
+    <string name="ssltls_btn_share_report">Bagikan Laporan</string>
+    <string name="ssltls_btn_save_note">Simpan ke Catatan</string>
+    <string name="ssltls_status_valid">Valid 🟢</string>
+    <string name="ssltls_status_expired">Kedaluwarsa / Tidak Valid 🔴</string>
+    <string name="ssltls_expires_in_days">Kedaluwarsa dalam %1$d hari</string>
+    <string name="ssltls_expires_in_days_red">Kedaluwarsa dalam %1$d hari 🔴</string>
+    <string name="ssltls_expires_in_days_green">%1$d hari tersisa 🟢</string>
+    <string name="ssltls_chain_complete">Rantai Lengkap 🟢</string>
+    <string name="ssltls_chain_incomplete">Rantai Tidak Lengkap 🟡</string>
+    <string name="ssltls_vuln_safe">AMAN 🟢</string>
+    <string name="ssltls_vuln_vulnerable">RENTAN 🔴</string>
+    <string name="ssltls_yes">YA 🟢</string>
+    <string name="ssltls_no_disabled">TIDAK 🟢 (Nonaktif)</string>
+    <string name="ssltls_no_enabled">YA 🔴 (Tidak Aman)</string>
+    <string name="ssltls_share_format">SSL/TLS Lab %1$s: Grade %2$s (%3$d/100), Sertifikat valid %4$d hari, %5$s, %6$d kerentanan - via NeTez</string>
+    <string name="ssltls_added_success">Berhasil menambahkan %1$s ke Domain Saya</string>
+
+    <!-- Security Tools Section -->
+    <string name="security_tools_section">Alat Keamanan</string>
+    <string name="security_tools_desc">Utilitas Kriptografi Pengembang &amp; Keamanan</string>
+
+    <string name="sectool_hash_title">Kalkulator Hash</string>
+    <string name="sectool_hash_desc">Hasilkan MD5, SHA-1, SHA-256, SHA-512</string>
+
+    <string name="sectool_base64_title">Enkoder/Dekoder Base64</string>
+    <string name="sectool_base64_desc">Enkode &amp; dekode teks &amp; berkas Base64</string>
+
+    <string name="sectool_url_title">Enkoder/Dekoder URL</string>
+    <string name="sectool_url_desc">Enkode &amp; dekode komponen string URL</string>
+
+    <string name="sectool_jwt_title">Dekoder JWT</string>
+    <string name="sectool_jwt_desc">Parses header, payload &amp; verifikasi masa berlaku token</string>
+
+    <string name="sectool_uuid_title">Generator UUID</string>
+    <string name="sectool_uuid_desc">Hasilkan Identifikasi Unik Universal v4 &amp; v1</string>
+
+    <string name="sectool_token_title">Generator Token Acak</string>
+    <string name="sectool_token_desc">Hasilkan token terenkripsi yang aman</string>
+
+    <string name="sectool_hmac_title">Generator HMAC</string>
+    <string name="sectool_hmac_desc">Kode autentikasi pesan berbasis hash</string>
+
+    <string name="sectool_checksum_title">Kalkulator Checksum</string>
+    <string name="sectool_checksum_desc">Verifikasi MD5, SHA-256, CRC32, Adler32 berkas</string>
+
+    <string name="sectool_timestamp_title">Konverter Timestamp</string>
+    <string name="sectool_timestamp_desc">Konversi detik/milis epoch ke ISO8601 &amp; tanggal</string>
+
+    <string name="sectool_regex_title">Penguji Regex</string>
+    <string name="sectool_regex_desc">Uji ekspresi reguler &amp; inspeksi grup cocok</string>
 </resources>

@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import com.herwin.netez.R
 import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.components.ToolItem
-import com.herwin.netez.ui.theme.PremiumNavy
 
 @Composable
 fun DiagnosticScreen(
@@ -26,50 +25,22 @@ fun DiagnosticScreen(
     onNavigateToIspComparison: () -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(PremiumNavy),
-        contentPadding = PaddingValues(20.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            ToolItem(
-                title = stringResource(R.string.diag_ping),
-                subtitle = "Check single & multi host latency",
-                painter = AppIcons.networkCheck(),
-                onClick = onNavigateToPing
-            )
-        }
-        item {
-            ToolItem(
-                title = stringResource(R.string.diag_traceroute),
-                subtitle = "Trace network hops to destination",
-                painter = AppIcons.route(),
-                onClick = onNavigateToTraceroute
-            )
-        }
-        item {
-            ToolItem(
-                title = stringResource(R.string.diag_speedtest),
-                subtitle = "Measure download & upload speed",
-                painter = AppIcons.speed(),
-                onClick = onNavigateToSpeed
-            )
-        }
-        item {
-            ToolItem(
-                title = stringResource(R.string.diag_stability),
-                subtitle = stringResource(R.string.diag_stability_desc),
-                painter = AppIcons.networkCheck(),
-                onClick = onNavigateToStability
-            )
-        }
+        // 1. DNS Lookup
         item {
             ToolItem(
                 title = stringResource(R.string.diag_dns),
-                subtitle = "Resolve domain names to IP",
+                subtitle = "Resolve domain names to IP addresses",
                 painter = AppIcons.dns(),
                 onClick = onNavigateToDns
             )
         }
+        // 2. HTTP Check
         item {
             ToolItem(
                 title = stringResource(R.string.diag_http_check),
@@ -78,12 +49,49 @@ fun DiagnosticScreen(
                 onClick = onNavigateToHttpCheck
             )
         }
+        // 3. ISP Comparison & Rating
         item {
             ToolItem(
                 title = stringResource(R.string.diag_isp_comparison),
                 subtitle = stringResource(R.string.diag_isp_comparison_desc),
                 painter = AppIcons.compare(),
                 onClick = onNavigateToIspComparison
+            )
+        }
+        // 4. Ping Test
+        item {
+            ToolItem(
+                title = stringResource(R.string.diag_ping),
+                subtitle = "Check single & multi host latency",
+                painter = AppIcons.networkCheck(),
+                onClick = onNavigateToPing
+            )
+        }
+        // 5. Speed Test
+        item {
+            ToolItem(
+                title = stringResource(R.string.diag_speedtest),
+                subtitle = "Measure download & upload bandwidth",
+                painter = AppIcons.speed(),
+                onClick = onNavigateToSpeed
+            )
+        }
+        // 6. Stability Test
+        item {
+            ToolItem(
+                title = stringResource(R.string.diag_stability),
+                subtitle = stringResource(R.string.diag_stability_desc),
+                painter = AppIcons.networkCheck(),
+                onClick = onNavigateToStability
+            )
+        }
+        // 7. Traceroute
+        item {
+            ToolItem(
+                title = stringResource(R.string.diag_traceroute),
+                subtitle = "Trace network hops to destination",
+                painter = AppIcons.route(),
+                onClick = onNavigateToTraceroute
             )
         }
     }

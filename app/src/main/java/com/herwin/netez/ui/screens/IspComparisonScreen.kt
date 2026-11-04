@@ -62,11 +62,11 @@ fun IspComparisonScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = SoftDarkBg,
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
             tonalElevation = 4.dp
         ) {

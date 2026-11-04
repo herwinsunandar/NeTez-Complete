@@ -16,7 +16,7 @@ import java.util.Date
 import java.util.Locale
 
 data class HttpHeaderState(
-    val url: String = "google.com",
+    val url: String = "",
     val headers: Map<String?, List<String>> = emptyMap(),
     val isLoading: Boolean = false
 )
@@ -30,9 +30,15 @@ class HttpHeaderViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun fetchHeaders() {
-        _uiState.value = _uiState.value.copy(isLoading = true, headers = emptyMap())
+        val targetUrl = _uiState.value.url.trim().ifBlank { "google.com" }
+
+        _uiState.value = _uiState.value.copy(
+            isLoading = true,
+            headers = emptyMap(),
+            url = _uiState.value.url.ifBlank { targetUrl }
+        )
         viewModelScope.launch {
-            val res = HttpHeaderManager.getHeaders(_uiState.value.url)
+            val res = HttpHeaderManager.getHeaders(targetUrl)
             _uiState.value = _uiState.value.copy(isLoading = false, headers = res)
         }
     }
@@ -40,18 +46,18 @@ class HttpHeaderViewModel(application: Application) : AndroidViewModel(applicati
     fun getShareText(): String {
         val state = _uiState.value
         if (state.headers.isEmpty()) return ""
-        
+
         val sb = StringBuilder("🌐 NeTez HTTP Headers Report\n")
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
         sb.append("📅 Date: ${sdf.format(Date())}\n")
         sb.append("─────────────────────\n")
         sb.append("🎯 Target: ${state.url}\n")
         sb.append("📊 Headers:\n")
-        
+
         state.headers.forEach { (key, values) ->
             sb.append("   • ${key ?: "Status"}: ${values.joinToString(", ")}\n")
         }
-        
+
         sb.append("─────────────────────\n")
         sb.append("Sent from NeTez Network Tools")
         return sb.toString()

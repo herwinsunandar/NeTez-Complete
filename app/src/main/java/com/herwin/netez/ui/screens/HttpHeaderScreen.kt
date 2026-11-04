@@ -1,26 +1,31 @@
 package com.herwin.netez.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.herwin.netez.R
 import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.components.ResultRow
-import com.herwin.netez.ui.theme.PremiumNavy
-import com.herwin.netez.ui.theme.SoftDarkBg
+import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.viewmodels.HttpHeaderViewModel
 
 @Composable
@@ -31,49 +36,88 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // 1. Top Input Section
+        // 1. Top Input Card Section
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = SoftDarkBg,
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-            tonalElevation = 4.dp
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+            tonalElevation = 2.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = uiState.url,
                     onValueChange = { viewModel.updateUrl(it) },
-                    placeholder = { Text("URL (e.g. google.com)", color = Color(0xFF9CA3AF)) },
+                    placeholder = {
+                        Text(
+                            text = "e.g. google.com or example.com",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontSize = 13.sp
+                        )
+                    },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
-                        focusedBorderColor = Color(0xFF6C8CFF)
+                    enabled = !uiState.isLoading,
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Go
                     ),
-                    singleLine = true
+                    keyboardActions = KeyboardActions(
+                        onGo = { viewModel.fetchHeaders() }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    ),
+                    trailingIcon = {
+                        if (uiState.url.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateUrl("") }) {
+                                Icon(
+                                    painter = AppIcons.close(),
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 )
+
                 Button(
                     onClick = { viewModel.fetchHeaders() },
                     enabled = !uiState.isLoading,
-                    modifier = Modifier.height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))
+                    modifier = Modifier.height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     if (uiState.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
                     } else {
-                        Text("CHECK", fontWeight = FontWeight.ExtraBold)
+                        Icon(
+                            painter = AppIcons.search(),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "CHECK",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }
@@ -82,7 +126,7 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel = viewModel()) {
         // 2. Result Content
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(20.dp),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (uiState.headers.isNotEmpty() && !uiState.isLoading) {
@@ -93,9 +137,9 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel = viewModel()) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "HTTP Headers Information",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = Color.White,
+                            text = "HTTP Headers Information",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                         Row {
@@ -103,27 +147,39 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel = viewModel()) {
                                 viewModel.copyResultsToClipboard()
                                 Toast.makeText(context, "Headers copied to clipboard", Toast.LENGTH_SHORT).show()
                             }) {
-                                Icon(AppIcons.contentCopy(), contentDescription = "Copy Results", tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.contentCopy(),
+                                    contentDescription = "Copy Results",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                             IconButton(onClick = {
                                 viewModel.shareResults(context)
                             }) {
-                                Icon(AppIcons.share(), contentDescription = "Share Results", tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.share(),
+                                    contentDescription = "Share Results",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
                 }
-                
+
                 items(uiState.headers.entries.toList()) { entry ->
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = SoftDarkBg
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        tonalElevation = 2.dp
                     ) {
                         ResultRow(
                             label = entry.key ?: "Status",
                             value = entry.value.joinToString(", "),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                            showCopyIcon = false
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            showCopyIcon = false,
+                            isTechnicalData = true
                         )
                     }
                 }
@@ -131,4 +187,3 @@ fun HttpHeaderScreen(viewModel: HttpHeaderViewModel = viewModel()) {
         }
     }
 }
-

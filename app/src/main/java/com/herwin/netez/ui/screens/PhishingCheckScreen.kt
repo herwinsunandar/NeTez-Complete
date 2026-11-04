@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,19 +24,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.R
 import com.herwin.netez.ui.AppIcons
-import com.herwin.netez.ui.theme.PremiumNavy
-import com.herwin.netez.ui.theme.SoftDarkBg
-import com.herwin.netez.ui.theme.TextGray
-import com.herwin.netez.ui.viewmodels.PhishingCheckViewModel
-import com.herwin.netez.ui.viewmodels.PhishingResult
-import com.herwin.netez.ui.viewmodels.PhishingStatus
+import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.viewmodels.PhishingCheckItem
+import com.herwin.netez.ui.viewmodels.PhishingCheckViewModel
+import com.herwin.netez.ui.viewmodels.PhishingStatus
 import com.herwin.netez.workers.UrlHausFeedWorker
+
+import com.herwin.netez.entitlement.FeatureId
+import com.herwin.netez.ui.components.ContextualPaywallDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,26 +46,45 @@ fun PhishingCheckScreen(
     viewModel: PhishingCheckViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.history.collectAsState()
-    
+
+    if (viewModel.showPaywallDialog) {
+        ContextualPaywallDialog(
+            featureId = FeatureId.PHISHING_CHECK_DAILY,
+            limitText = "Free plan supports up to 3 Phishing checks per day. Upgrade to NeTez PRO or watch a quick video for +1 bonus check.",
+            onDismiss = { viewModel.showPaywallDialog = false },
+            onUpgradeClick = {}
+        )
+    }
+
+    if (viewModel.showGlobalSupportDialog) {
+        ContextualPaywallDialog(
+            featureId = FeatureId.GLOBAL_TOOL_USAGE,
+            limitText = "You've performed 3 network & security scans! If NeTez is helpful, consider watching a short video to support development or upgrade to PRO (Skippable).",
+            onDismiss = { viewModel.showGlobalSupportDialog = false },
+            onUpgradeClick = {}
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // 0. Feed Status Chip
         Surface(
-            color = SoftDarkBg,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = Color(0xFF6C8CFF).copy(alpha = 0.1f),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.clickable { 
+                    modifier = Modifier.clickable {
                         UrlHausFeedWorker.schedule(context, true)
                         Toast.makeText(context, "Updating feed...", Toast.LENGTH_SHORT).show()
                     }
@@ -69,7 +92,8 @@ fun PhishingCheckScreen(
                     Text(
                         text = "URLhaus: Updated ${viewModel.lastUpdateText} • ${viewModel.urlHausCount / 1000}k URLs",
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        color = Color(0xFF6C8CFF),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontFamily = TechMonospace,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -79,37 +103,57 @@ fun PhishingCheckScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. Input Card
             item {
-                Card(
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SoftDarkBg),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    tonalElevation = 2.dp
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedTextField(
                             value = viewModel.inputUrl,
                             onValueChange = { viewModel.onUrlChange(it) },
-                            label = { Text(stringResource(R.string.phishing_field_url), color = TextGray) },
-                            placeholder = { Text(stringResource(R.string.phishing_placeholder_url), color = TextGray.copy(alpha = 0.5f)) },
+                            placeholder = {
+                                Text(
+                                    text = "e.g. https://example.com or suspicious-link.com",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    fontSize = 13.sp
+                                )
+                            },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedBorderColor = Color(0xFF6C8CFF),
-                                unfocusedBorderColor = TextGray
-                            ),
+                            enabled = !viewModel.isScanning,
+                            shape = RoundedCornerShape(12.dp),
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Go
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onGo = { viewModel.checkPhishing(viewModel.inputUrl) }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            ),
                             trailingIcon = {
                                 if (viewModel.inputUrl.isNotEmpty()) {
                                     IconButton(onClick = { viewModel.onUrlChange("") }) {
-                                        Icon(AppIcons.close(), contentDescription = null, tint = TextGray)
+                                        Icon(
+                                            painter = AppIcons.close(),
+                                            contentDescription = "Clear",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
@@ -122,31 +166,59 @@ fun PhishingCheckScreen(
                         ) {
                             TextButton(
                                 onClick = { viewModel.pasteFromClipboard() },
-                                colors = ButtonDefaults.buttonColors(contentColor = Color(0xFF6C8CFF), containerColor = Color.Transparent)
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                )
                             ) {
-                                Text(stringResource(R.string.phishing_btn_paste), fontSize = 12.sp)
+                                Icon(
+                                    painter = AppIcons.contentCopy(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.phishing_btn_paste),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
 
                         Button(
                             onClick = { viewModel.checkPhishing(viewModel.inputUrl) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !viewModel.isScanning
                         ) {
                             if (viewModel.isScanning) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
                             } else {
-                                Text(stringResource(R.string.blacklist_btn_check), fontWeight = FontWeight.Bold)
+                                Icon(
+                                    painter = AppIcons.search(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.blacklist_btn_check),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
                             }
                         }
-                        
+
                         Text(
-                            text = "🔒 Offline feed dicek dulu (privacy). Online check hanya kirim URL tanpa token ke Abuse.ch Swiss non-profit",
-                            color = TextGray,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(top = 4.dp)
+                            text = stringResource(R.string.phishing_privacy_note),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
                 }
@@ -160,16 +232,29 @@ fun PhishingCheckScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Scan Results", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            text = "Scan Results",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Row {
-                            IconButton(onClick = { 
+                            IconButton(onClick = {
                                 viewModel.copyToClipboard()
                                 Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
                             }) {
-                                Icon(AppIcons.contentCopy(), null, tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.contentCopy(),
+                                    contentDescription = "Copy",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                             IconButton(onClick = { viewModel.shareResults(context) }) {
-                                Icon(AppIcons.share(), null, tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.share(),
+                                    contentDescription = "Share",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
@@ -178,93 +263,127 @@ fun PhishingCheckScreen(
                 // 3. Summary Card
                 item {
                     val res = viewModel.result!!
-                    val statusColor = when(res.status) {
-                        PhishingStatus.PHISHING -> Color(0xFFEF4444)
-                        PhishingStatus.SUSPICIOUS -> Color(0xFFF59E0B)
-                        PhishingStatus.SAFE -> Color(0xFF10B981)
+                    val statusColor = when (res.status) {
+                        PhishingStatus.PHISHING -> MaterialTheme.colorScheme.error
+                        PhishingStatus.SUSPICIOUS -> MaterialTheme.colorScheme.tertiary
+                        PhishingStatus.SAFE -> MaterialTheme.colorScheme.secondary
                     }
-                    val statusIcon = when(res.status) {
+                    val statusIcon = when (res.status) {
                         PhishingStatus.PHISHING -> AppIcons.error()
                         PhishingStatus.SUSPICIOUS -> AppIcons.warning()
                         PhishingStatus.SAFE -> AppIcons.checkCircle()
                     }
-                    val statusText = when(res.status) {
+                    val statusText = when (res.status) {
                         PhishingStatus.PHISHING -> stringResource(R.string.phishing_status_phishing)
                         PhishingStatus.SUSPICIOUS -> stringResource(R.string.phishing_status_suspicious)
                         PhishingStatus.SAFE -> stringResource(R.string.phishing_status_safe)
                     }
-                    val statusDesc = when(res.status) {
+                    val statusDesc = when (res.status) {
                         PhishingStatus.PHISHING -> stringResource(R.string.phishing_phishing_desc)
                         PhishingStatus.SUSPICIOUS -> stringResource(R.string.phishing_suspicious_desc)
                         PhishingStatus.SAFE -> stringResource(R.string.phishing_safe_desc)
                     }
 
-                    Card(
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = SoftDarkBg),
-                        shape = RoundedCornerShape(16.dp)
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        tonalElevation = 2.dp
                     ) {
                         Column {
                             Row(
-                                modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
                                 Surface(
-                                    color = statusColor.copy(alpha = 0.1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.size(48.dp)
+                                    color = statusColor.copy(alpha = 0.15f),
+                                    shape = CircleShape,
+                                    border = BorderStroke(1.dp, statusColor)
                                 ) {
-                                    Icon(
-                                        painter = statusIcon,
-                                        contentDescription = null,
-                                        tint = statusColor,
-                                        modifier = Modifier.padding(12.dp).fillMaxSize()
-                                    )
+                                    Box(
+                                        modifier = Modifier.size(44.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = statusIcon,
+                                            contentDescription = null,
+                                            tint = statusColor,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
                                 }
-                                
+
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = statusText, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                                    Text(text = res.domain, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = statusText,
+                                        color = statusColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp
+                                    )
+                                    Text(
+                                        text = res.domain,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontFamily = TechMonospace,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                     if (res.status == PhishingStatus.PHISHING) {
                                         val threatItem = res.checks.find { it.status == "PHISHING" }
-                                        Text(text = "Terverifikasi! ${threatItem?.description ?: ""}", color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            text = "Verified threat! ${threatItem?.description ?: ""}",
+                                            color = statusColor,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     } else {
-                                        Text(text = statusDesc, color = TextGray, fontSize = 11.sp)
+                                        Text(
+                                            text = statusDesc,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 11.sp
+                                        )
                                     }
                                 }
                             }
-                            
+
                             // Risk Score
-                            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(stringResource(R.string.phishing_risk_score), fontSize = 10.sp, color = TextGray)
-                                    Text("${res.riskScore}/100", fontSize = 10.sp, color = statusColor, fontWeight = FontWeight.Bold)
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.phishing_risk_score),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "${res.riskScore}/100",
+                                        fontSize = 11.sp,
+                                        fontFamily = TechMonospace,
+                                        color = statusColor,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                                 Spacer(Modifier.height(6.dp))
                                 LinearProgressIndicator(
                                     progress = { res.riskScore / 100f },
-                                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(CircleShape),
                                     color = statusColor,
-                                    trackColor = Color.White.copy(alpha = 0.05f)
+                                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                                 )
-                                if (res.status == PhishingStatus.PHISHING) {
-                                    Spacer(Modifier.height(12.dp))
-                                    Button(
-                                        onClick = { /* Report & Block */ },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text("Blokir & Laporkan", fontWeight = FontWeight.Bold)
-                                    }
-                                }
                                 Spacer(Modifier.height(12.dp))
                             }
                         }
                     }
                 }
-                
+
                 // 4. Detail Layers
                 items(viewModel.result?.checks ?: emptyList()) { check ->
                     PhishingCheckItemCard(
@@ -279,20 +398,30 @@ fun PhishingCheckScreen(
 
             // Education Card
             item {
-                Card(
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF6C8CFF).copy(alpha = 0.05f)),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.1f))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.phishing_education_title), color = Color(0xFF6C8CFF), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(stringResource(R.string.phishing_education_content), color = TextGray, fontSize = 12.sp, lineHeight = 20.sp)
+                        Text(
+                            text = stringResource(R.string.phishing_education_title),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(R.string.phishing_education_content),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
                     }
                 }
             }
-            
+
             item { Spacer(Modifier.height(40.dp)) }
         }
     }
@@ -304,65 +433,95 @@ fun PhishingCheckItemCard(
     onCopy: () -> Unit
 ) {
     val context = LocalContext.current
-    val statusColor = when(item.status) {
-        "LISTED", "PHISHING", "NO SSL" -> Color(0xFFEF4444)
-        "SUSPICIOUS" -> Color(0xFFF59E0B)
-        "CLEAN", "SAFE", "VALID" -> Color(0xFF10B981)
-        else -> TextGray
+    val statusColor = when (item.status) {
+        "LISTED", "PHISHING", "NO SSL" -> MaterialTheme.colorScheme.error
+        "SUSPICIOUS" -> MaterialTheme.colorScheme.tertiary
+        "CLEAN", "SAFE", "VALID" -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    
-    Card(
+
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SoftDarkBg),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.03f))
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(Modifier.size(10.dp).clip(CircleShape).background(statusColor))
+                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(statusColor))
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(item.name, fontSize = 11.sp, color = TextGray)
+                        Text(
+                            text = item.name,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         if (item.isVerified) {
                             Spacer(Modifier.width(8.dp))
-                            Surface(color = Color(0xFF6C8CFF).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
-                                Text("VERIFIED", color = Color(0xFF6C8CFF), fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "VERIFIED",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 9.sp,
+                                    fontFamily = TechMonospace,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
                             }
                         }
                     }
                     Text(
                         text = "${item.status} (${item.latency}ms)",
-                        color = if (item.status == "CLEAN" || item.status == "SAFE") Color.White else statusColor,
+                        color = statusColor,
+                        fontFamily = TechMonospace,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(item.description, color = TextGray, fontSize = 10.sp)
+                    Text(
+                        text = item.description,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
                 }
-                
+
                 IconButton(
-                    onClick = onCopy, 
-                    modifier = Modifier.size(24.dp)
+                    onClick = onCopy,
+                    modifier = Modifier.size(28.dp)
                 ) {
-                    Icon(AppIcons.contentCopy(), null, tint = TextGray.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                    Icon(
+                        painter = AppIcons.contentCopy(),
+                        contentDescription = "Copy",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
             if (item.detailUrl != null) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 Button(
-                    onClick = { 
+                    onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.detailUrl))
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.fillMaxWidth().height(36.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF).copy(alpha = 0.1f), contentColor = Color(0xFF6C8CFF)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(36.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("Lihat di URLhaus", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("View on URLhaus", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

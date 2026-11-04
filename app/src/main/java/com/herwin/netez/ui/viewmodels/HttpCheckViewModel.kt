@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 data class HttpCheckState(
-    val url: String = "google.com",
+    val url: String = "",
     val method: String = "GET",
     val result: HttpCheckResult? = null,
     val history: List<HttpCheckResult> = emptyList(),
@@ -54,24 +54,23 @@ class HttpCheckViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun runCheck() {
-        var targetUrl = _uiState.value.url.trim()
-        if (targetUrl.isEmpty()) return
-        
+        var targetUrl = _uiState.value.url.trim().ifBlank { "google.com" }
+
         if (!targetUrl.contains("http")) {
             targetUrl = "https://$targetUrl"
         }
 
-        _uiState.value = _uiState.value.copy(isLoading = true, url = targetUrl)
+        _uiState.value = _uiState.value.copy(isLoading = true, url = _uiState.value.url.ifBlank { targetUrl })
         viewModelScope.launch {
             val res = HttpCheckManager.checkWebsite(targetUrl, _uiState.value.method)
             val newHistory = (listOf(res) + _uiState.value.history).take(7)
-            
+
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 result = res,
                 history = newHistory
             )
-            
+
             saveToDb(res)
         }
     }
@@ -84,7 +83,7 @@ class HttpCheckViewModel(application: Application) : AndroidViewModel(applicatio
         sb.append("📡 Status: ${if (res.isAvailable) "ONLINE" else "OFFLINE"} (${res.statusCode})\n")
         sb.append("⚡ Response: ${res.responseTime}ms\n")
         sb.append("🌐 IP: ${res.ipAddress}\n")
-        
+
         sb.append("\n🕒 Timings:\n")
         sb.append("   • DNS: ${if (res.dnsTime > 0) "${res.dnsTime}ms" else "cached"}\n")
         sb.append("   • Connect: ${if (res.connectTime > 0) "${res.connectTime}ms" else "-"}\n")

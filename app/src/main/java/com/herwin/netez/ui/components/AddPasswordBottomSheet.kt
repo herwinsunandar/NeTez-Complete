@@ -24,15 +24,16 @@ import com.herwin.netez.ui.theme.TextGray
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPasswordBottomSheet(
+    initialEntry: PasswordEntry? = null,
     prefilledPassword: String = "",
     prefilledStrength: Int = 0,
     onDismiss: () -> Unit,
     onSave: (PasswordEntry) -> Unit
 ) {
-    var appName by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf(prefilledPassword) }
-    var notes by remember { mutableStateOf("") }
+    var appName by remember { mutableStateOf(initialEntry?.appName ?: "") }
+    var username by remember { mutableStateOf(initialEntry?.username ?: "") }
+    var password by remember { mutableStateOf(initialEntry?.passwordEncrypted ?: prefilledPassword) }
+    var notes by remember { mutableStateOf(initialEntry?.notes ?: "") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
@@ -48,7 +49,7 @@ fun AddPasswordBottomSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = stringResource(R.string.pass_save_title),
+                text = if (initialEntry != null) "Update Password" else stringResource(R.string.pass_save_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -102,11 +103,12 @@ fun AddPasswordBottomSheet(
                 )
             )
 
-            if (prefilledStrength > 0) {
+            if (prefilledStrength > 0 || (initialEntry?.strengthScore ?: 0) > 0) {
+                val score = if (prefilledStrength > 0) prefilledStrength else initialEntry?.strengthScore ?: 0
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("$prefilledStrength/100", color = if (prefilledStrength >= 80) Color(0xFF10B981) else Color(0xFFEF4444), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("$score/100", color = if (score >= 80) Color(0xFF10B981) else Color(0xFFEF4444), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Spacer(Modifier.width(8.dp))
-                    Text(if (prefilledStrength >= 80) "STRONG" else "WEAK", color = TextGray, fontSize = 12.sp)
+                    Text(if (score >= 80) "STRONG" else "WEAK", color = TextGray, fontSize = 12.sp)
                 }
             }
 
@@ -129,14 +131,21 @@ fun AddPasswordBottomSheet(
                 onClick = {
                     if (appName.isNotEmpty() && username.isNotEmpty() && password.isNotEmpty()) {
                         onSave(
-                            PasswordEntry(
-                                appName = appName,
+                            (initialEntry ?: PasswordEntry(
+                                appName = "",
                                 appPackage = null,
+                                username = "",
+                                passwordEncrypted = "",
+                                notes = "",
+                                iconUrl = null,
+                                strengthScore = prefilledStrength
+                            )).copy(
+                                appName = appName,
                                 username = username,
                                 passwordEncrypted = password,
                                 notes = notes,
-                                iconUrl = null,
-                                strengthScore = prefilledStrength
+                                strengthScore = if (prefilledStrength > 0) prefilledStrength else (initialEntry?.strengthScore ?: 0),
+                                updatedAt = System.currentTimeMillis()
                             )
                         )
                     }
@@ -146,7 +155,7 @@ fun AddPasswordBottomSheet(
                 shape = RoundedCornerShape(12.dp),
                 enabled = appName.isNotEmpty() && username.isNotEmpty() && password.isNotEmpty()
             ) {
-                Text(stringResource(R.string.pass_btn_save), fontWeight = FontWeight.Bold)
+                Text(if (initialEntry != null) "UPDATE" else stringResource(R.string.pass_btn_save), fontWeight = FontWeight.Bold)
             }
             
             Spacer(Modifier.height(20.dp))

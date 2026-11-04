@@ -14,11 +14,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.herwin.netez.ui.theme.TechMonospace
 
 @Composable
 fun ResultRow(
@@ -26,11 +26,10 @@ fun ResultRow(
     value: String,
     modifier: Modifier = Modifier,
     isSelectable: Boolean = true,
-    showCopyIcon: Boolean = true
+    showCopyIcon: Boolean = true,
+    isTechnicalData: Boolean = false
 ) {
     val context = LocalContext.current
-    val textGray = Color(0xFF94A3B8)
-    val copyIconColor = Color(0xFF8B92B5)
 
     Row(
         modifier = modifier
@@ -42,13 +41,14 @@ fun ResultRow(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = textGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                fontFamily = if (isTechnicalData || label.contains("IP", true) || label.contains("MAC", true) || label.contains("Port", true) || label.contains("Latency", true)) TechMonospace else MaterialTheme.typography.bodyLarge.fontFamily,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.sp
             )
@@ -58,7 +58,7 @@ fun ResultRow(
             Icon(
                 imageVector = Icons.Default.ContentCopy,
                 contentDescription = "Copy",
-                tint = copyIconColor,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .size(18.dp)
                     .clickable {

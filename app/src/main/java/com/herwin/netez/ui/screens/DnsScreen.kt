@@ -1,12 +1,11 @@
 package com.herwin.netez.ui.screens
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,36 +13,36 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.herwin.netez.R
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureId
 import com.herwin.netez.network.DnsRecord
 import com.herwin.netez.network.DnsRecordType
 import com.herwin.netez.network.DnsServer
 import com.herwin.netez.network.PublicDnsServers
 import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.ContextualPaywallDialog
 import com.herwin.netez.ui.components.ResultRow
-import com.herwin.netez.ui.theme.PremiumNavy
-import com.herwin.netez.ui.theme.SoftDarkBg
-import com.herwin.netez.ui.theme.TextGray
+import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.viewmodels.DnsViewModel
-
-private val BrandBlue = Color(0xFF6C8CFF)
-private val BorderColor = Color(0xFF2D324D)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,24 +54,47 @@ fun DnsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showServerMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val accessManager = remember { FeatureAccessManager.getInstance(context) }
+    var showPaywallDialog by remember { mutableStateOf(false) }
+
+    val pdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri: Uri? ->
+        uri?.let { viewModel.exportPdfReport(context, it) }
+    }
+
+    if (showPaywallDialog) {
+        ContextualPaywallDialog(
+            featureId = FeatureId.REPORT_EXPORT,
+            limitText = "Professional DNS Lookup PDF Report export is available in NeTez PRO.",
+            onDismiss = { showPaywallDialog = false },
+            onUpgradeClick = {}
+        )
+    }
+
+    LaunchedEffect(viewModel.actionMessage) {
+        viewModel.actionMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.actionMessage = null
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // 1. Top Tabs
-        PrimaryScrollableTabRow(
+        // 1. Top Record Type Tabs
+        SecondaryScrollableTabRow(
             selectedTabIndex = uiState.recordType.ordinal,
-            containerColor = SoftDarkBg,
-            contentColor = BrandBlue,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
             edgePadding = 16.dp,
             divider = {},
             indicator = {
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(uiState.recordType.ordinal),
-                    color = BrandBlue,
-                    height = 3.dp
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         ) {
@@ -86,20 +108,24 @@ fun DnsScreen(
                             fontWeight = if (uiState.recordType == type) FontWeight.Bold else FontWeight.Medium,
                             fontSize = 13.sp
                         )
-                    }
+                    },
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 2. DNS Server Selector Row
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -110,25 +136,36 @@ fun DnsScreen(
                             onClick = { viewModel.updateServer(server) }
                         )
                     }
-                    // Custom/More Button
+                    // Custom/More Dropdown Button
                     Surface(
                         onClick = { showServerMenu = true },
                         shape = CircleShape,
-                        color = SoftDarkBg,
-                        border = BorderStroke(1.dp, BorderColor),
-                        modifier = Modifier.size(32.dp)
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        modifier = Modifier.size(34.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(AppIcons.expandMore(), null, modifier = Modifier.size(16.dp), tint = TextGray)
-                            
+                            Icon(
+                                painter = AppIcons.expandMore(),
+                                contentDescription = "More Servers",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
                             DropdownMenu(
                                 expanded = showServerMenu,
                                 onDismissRequest = { showServerMenu = false },
-                                containerColor = SoftDarkBg
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
                                 PublicDnsServers.forEach { server ->
                                     DropdownMenuItem(
-                                        text = { Text("${server.name} (${server.ip})", fontSize = 14.sp, color = Color.White) },
+                                        text = {
+                                            Text(
+                                                text = "${server.name} (${server.ip})",
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
                                         onClick = {
                                             viewModel.updateServer(server)
                                             showServerMenu = false
@@ -138,10 +175,17 @@ fun DnsScreen(
                                                 AsyncImage(
                                                     model = "https://flagcdn.com/w40/${server.countryCode.lowercase()}.png",
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(20.dp, 14.dp).clip(RoundedCornerShape(2.dp))
+                                                    modifier = Modifier
+                                                        .size(20.dp, 14.dp)
+                                                        .clip(RoundedCornerShape(2.dp))
                                                 )
                                             } else {
-                                                Icon(AppIcons.dns(), null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                                Icon(
+                                                    painter = AppIcons.dns(),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
                                             }
                                         }
                                     )
@@ -155,42 +199,60 @@ fun DnsScreen(
             // 3. Input Card
             item {
                 Surface(
-                    modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp)),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    color = SoftDarkBg,
-                    border = BorderStroke(1.dp, BorderColor)
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    tonalElevation = 2.dp
                 ) {
                     Row(
                         modifier = Modifier.padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        TextField(
+                        OutlinedTextField(
                             value = uiState.domain,
                             onValueChange = { viewModel.updateDomain(it) },
-                            placeholder = { Text("Enter domain (e.g. google.com)", color = TextGray, fontSize = 15.sp) },
+                            placeholder = {
+                                Text(
+                                    text = "e.g. google.com or example.com",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    fontSize = 13.sp
+                                )
+                            },
                             modifier = Modifier.weight(1f),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
+                            enabled = !uiState.isLoading,
                             singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Go
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onGo = { viewModel.lookup() }
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
                         )
+
                         Button(
                             onClick = { viewModel.lookup() },
-                            modifier = Modifier.height(48.dp),
+                            modifier = Modifier.height(52.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             enabled = !uiState.isLoading,
                             contentPadding = PaddingValues(horizontal = 16.dp)
                         ) {
                             if (uiState.isLoading) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
                             } else {
                                 Text("LOOKUP", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
@@ -199,12 +261,13 @@ fun DnsScreen(
                 }
             }
 
-            // 4. Status Bar
+            // 4. Status Bar & Results
             uiState.response?.let { res ->
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        color = BrandBlue.copy(alpha = 0.05f),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
@@ -217,17 +280,25 @@ fun DnsScreen(
                                     AsyncImage(
                                         model = "https://flagcdn.com/w40/${uiState.selectedServer.countryCode.lowercase()}.png",
                                         contentDescription = null,
-                                        modifier = Modifier.size(20.dp, 14.dp).clip(RoundedCornerShape(2.dp))
+                                        modifier = Modifier
+                                            .size(20.dp, 14.dp)
+                                            .clip(RoundedCornerShape(2.dp))
                                     )
                                     Spacer(Modifier.width(10.dp))
                                 } else {
-                                    Icon(AppIcons.dns(), null, tint = BrandBlue, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        painter = AppIcons.dns(),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                     Spacer(Modifier.width(8.dp))
                                 }
                                 Text(
                                     text = "Resolved via ${res.resolver} ${if (res.resolverIp == "System") "" else res.resolverIp}",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = BrandBlue,
+                                    fontFamily = TechMonospace,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -235,10 +306,11 @@ fun DnsScreen(
                             }
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "${res.latency}ms",
+                                text = "${res.latency} ms",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = BrandBlue,
-                                fontWeight = FontWeight.Black
+                                fontFamily = TechMonospace,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -257,21 +329,42 @@ fun DnsScreen(
                         ) {
                             Text(
                                 text = "Query Results",
-                                style = MaterialTheme.typography.titleSmall,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Row {
                                 IconButton(onClick = {
-                                    viewModel.copyResultsToClipboard()
-                                    Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
+                                    if (!accessManager.isPro()) {
+                                        showPaywallDialog = true
+                                    } else {
+                                        val cleanDomain = (uiState.domain.ifBlank { "Domain" }).replace(Regex("[^a-zA-Z0-9]"), "_")
+                                        pdfExportLauncher.launch("DNS_Audit_${cleanDomain}_All_Records.pdf")
+                                    }
                                 }) {
-                                    Icon(AppIcons.contentCopy(), null, tint = BrandBlue)
+                                    Icon(
+                                        painter = AppIcons.download(),
+                                        contentDescription = "PDF Report",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    viewModel.copyResultsToClipboard()
+                                }) {
+                                    Icon(
+                                        painter = AppIcons.contentCopy(),
+                                        contentDescription = "Copy",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                                 IconButton(onClick = {
                                     viewModel.shareResults(context)
                                 }) {
-                                    Icon(AppIcons.share(), null, tint = BrandBlue)
+                                    Icon(
+                                        painter = AppIcons.share(),
+                                        contentDescription = "Share",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         }
@@ -291,7 +384,7 @@ fun DnsScreen(
                     EmptyStateSuggestion { viewModel.updateServer(PublicDnsServers[0]) }
                 }
             }
-            
+
             item { Spacer(Modifier.height(80.dp)) }
         }
     }
@@ -302,25 +395,29 @@ fun DnsServerChip(server: DnsServer, isSelected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) BrandBlue else SoftDarkBg,
-        border = if (isSelected) null else BorderStroke(1.dp, BorderColor),
-        modifier = Modifier.height(36.dp)
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        modifier = Modifier.height(34.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            if (server.countryCode.isNotEmpty()) {
+                AsyncImage(
+                    model = "https://flagcdn.com/w40/${server.countryCode.lowercase()}.png",
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(18.dp, 12.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                )
+            }
             Text(
                 text = server.name,
-                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f),
                 fontSize = 12.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = if (server.ip == "System") "" else server.ip,
-                color = if (isSelected) Color.White.copy(alpha = 0.7f) else TextGray,
-                fontSize = 10.sp
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -332,89 +429,150 @@ fun DnsProResultCard(
     onPing: () -> Unit,
     onTrace: () -> Unit
 ) {
+    val recordTypeStr = when (record.type) {
+        1 -> "A"
+        28 -> "AAAA"
+        15 -> "MX"
+        16 -> "TXT"
+        5 -> "CNAME"
+        2 -> "NS"
+        12 -> "PTR"
+        else -> "Type ${record.type}"
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = SoftDarkBg,
-        border = BorderStroke(1.dp, BorderColor)
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        tonalElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                ResultRow("IP Address", record.data)
-            }
-            
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = recordTypeStr,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontFamily = TechMonospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                ResultMetric("TTL", "${record.ttl}s")
-                ResultMetric("TYPE", when(record.type) {
-                    1 -> "A"
-                    28 -> "AAAA"
-                    15 -> "MX"
-                    16 -> "TXT"
-                    5 -> "CNAME"
-                    2 -> "NS"
-                    else -> "Type ${record.type}"
-                })
-                ResultMetric("LOC", record.countryName.ifEmpty { "Global" })
+                Text(
+                    text = "TTL: ${record.ttl}s",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = TechMonospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Spacer(Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionChip(AppIcons.networkCheck(), "Ping", onPing)
-                ActionChip(AppIcons.route(), "Trace", onTrace)
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = record.data,
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = TechMonospace,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (record.countryName.isNotBlank() || record.provider.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (record.countryCode.isNotEmpty()) {
+                        AsyncImage(
+                            model = "https://flagcdn.com/w40/${record.countryCode.lowercase()}.png",
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(18.dp, 12.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                        )
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = "${record.provider} ${if (record.countryName.isNotEmpty()) "(${record.countryName})" else ""}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (record.type == 1 || record.type == 28) {
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onPing,
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(painter = AppIcons.networkCheck(), contentDescription = null, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("PING", fontSize = 11.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = onTrace,
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(painter = AppIcons.route(), contentDescription = null, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("TRACE", fontSize = 11.sp)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun ResultMetric(label: String, value: String) {
-    Column {
-        Text(label, fontSize = 9.sp, color = TextGray, fontWeight = FontWeight.Bold)
-        Text(value, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun ActionChip(icon: Painter, label: String, onClick: () -> Unit) {
+fun EmptyStateSuggestion(onSwitchServer: () -> Unit) {
     Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        color = Color.White.copy(alpha = 0.05f),
-        modifier = Modifier.height(32.dp)
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(icon, null, modifier = Modifier.size(14.dp), tint = BrandBlue)
-            Spacer(Modifier.width(6.dp))
-            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        }
-    }
-}
-
-@Composable
-fun EmptyStateSuggestion(onTryOther: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(AppIcons.searchOff(), null, modifier = Modifier.size(48.dp), tint = TextGray.copy(alpha = 0.5f))
-        Text("No records found", color = Color.White, fontWeight = FontWeight.Bold)
-        Text(
-            "Try switching to a different DNS server or check the domain spelling.",
-            color = TextGray,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
-        )
-        TextButton(onClick = onTryOther) {
-            Text("Switch DNS Server", color = BrandBlue, fontWeight = FontWeight.Bold)
+            Icon(
+                painter = AppIcons.searchOff(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "No DNS Records Found",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Try switching your DNS resolver server or check record type.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onSwitchServer,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("TRY GOOGLE DNS (8.8.8.8)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

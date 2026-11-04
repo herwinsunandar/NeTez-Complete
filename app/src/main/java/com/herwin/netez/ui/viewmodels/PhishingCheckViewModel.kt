@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.data.entities.PhishingCheckEntry
 import com.herwin.netez.data.SecurityPreferences
+import com.herwin.netez.engine.SslTlsEngine
 import com.herwin.netez.network.UrlHausService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,10 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureAccessState
+import com.herwin.netez.entitlement.FeatureId
+
 class PhishingCheckViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     private val phishingDao = db.phishingDao()
@@ -41,6 +46,8 @@ class PhishingCheckViewModel(application: Application) : AndroidViewModel(applic
     
     var urlHausCount by mutableStateOf(0)
     var lastUpdateText by mutableStateOf("Never")
+    var showPaywallDialog by mutableStateOf(false)
+    var showGlobalSupportDialog by mutableStateOf(false)
 
     val history = phishingDao.getAllPhishingChecks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -78,6 +85,14 @@ class PhishingCheckViewModel(application: Application) : AndroidViewModel(applic
 
     fun checkPhishing(url: String) {
         if (url.isBlank()) return
+
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        val accessState = accessManager.checkAccess(FeatureId.PHISHING_CHECK_DAILY)
+        if (accessState == FeatureAccessState.LIMIT_REACHED) {
+            showPaywallDialog = true
+            return
+        }
+        accessManager.consumeQuota(FeatureId.PHISHING_CHECK_DAILY)
         
         viewModelScope.launch {
             isScanning = true
@@ -87,6 +102,9 @@ class PhishingCheckViewModel(application: Application) : AndroidViewModel(applic
                 val checkResult = performPhishingCheck(url)
                 result = checkResult
                 refreshFeedInfo()
+                if (accessManager.trackAndCheckGlobalToolUsage()) {
+                    showGlobalSupportDialog = true
+                }
                 
                 // Save to DB
                 val entry = PhishingCheckEntry(
@@ -173,14 +191,61 @@ class PhishingCheckViewModel(application: Application) : AndroidViewModel(applic
             if (urlHausResult.status == "PHISHING" || phishStatsResult.status == "PHISHING") risk += 95
         }
 
-        // Layer 5: SSL Check (Simplified)
-        checks.add(PhishingCheckItem(
-            name = "SSL Certificate",
-            status = if (url.startsWith("https")) "VALID" else "NO SSL",
-            latency = 5,
-            description = if (url.startsWith("https")) "Encrypted connection" else "Insecure connection"
-        ))
-        if (!url.startsWith("https")) risk += 15
+        // Layer 5: SSL Check via SslTlsEngine
+        if (url.startsWith("https")) {
+            val sslStart = System.currentTimeMillis()
+            val sslRes = try {
+                SslTlsEngine.checkDomain(domain)
+            } catch (e: Exception) { null }
+            val sslTime = System.currentTimeMillis() - sslStart
+
+            if (sslRes != null) {
+                val cert = sslRes.certificate
+                when {
+                    cert.isSelfSigned -> {
+                        checks.add(PhishingCheckItem(
+                            name = "SSL Certificate",
+                            status = "SUSPICIOUS",
+                            latency = sslTime,
+                            description = "Self-signed certificate detected - suspicious"
+                        ))
+                        risk += 35
+                    }
+                    cert.isExpired -> {
+                        checks.add(PhishingCheckItem(
+                            name = "SSL Certificate",
+                            status = "EXPIRED",
+                            latency = sslTime,
+                            description = "Expired SSL certificate"
+                        ))
+                        risk += 30
+                    }
+                    else -> {
+                        checks.add(PhishingCheckItem(
+                            name = "SSL Certificate",
+                            status = "VALID",
+                            latency = sslTime,
+                            description = "Trusted SSL certificate (${cert.expiresInDays} days left)"
+                        ))
+                    }
+                }
+            } else {
+                checks.add(PhishingCheckItem(
+                    name = "SSL Certificate",
+                    status = "VALID",
+                    latency = 5,
+                    description = "Encrypted connection"
+                ))
+            }
+        } else {
+            checks.add(PhishingCheckItem(
+                name = "SSL Certificate",
+                status = "NO SSL",
+                latency = 5,
+                description = "Insecure unencrypted connection"
+            ))
+            risk += 15
+        }
 
         // Final Status
         val finalStatus = when {

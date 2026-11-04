@@ -45,9 +45,16 @@ object NetworkUtils {
             
             // Fallback to NetworkInterface if DHCP info is missing or invalid
             if (ipInt == 0 || netmaskInt == 0) {
-                val interfaces = NetworkInterface.getNetworkInterfaces()
+                val interfaces = NetworkInterface.getNetworkInterfaces() ?: return null
                 for (intf in interfaces) {
                     if (intf.isLoopback || !intf.isUp) continue
+                    
+                    // Skip cellular interfaces for LAN scanning context
+                    val name = intf.name.lowercase()
+                    if (name.contains("rmnet") || name.contains("pdp") || name.contains("ccmni") || name.contains("usb")) {
+                        continue
+                    }
+
                     val interfaceAddresses = intf.interfaceAddresses
                     for (addr in interfaceAddresses) {
                         val inetAddr = addr.address
@@ -57,6 +64,10 @@ object NetworkUtils {
                             
                             val prefix = addr.networkPrefixLength
                             val prefixLength = prefix.toInt().coerceIn(0, 32)
+                            
+                            // Safety: Skip very large networks (less than /20 prefix) for auto-discovery
+                            if (prefixLength < 20) continue
+
                             val maskLong = if (prefixLength == 0) 0xFFFFFF00L else (0xFFFFFFFFL shl (32 - prefixLength)) and 0xFFFFFFFFL
                             
                             val networkLong = ipLong and maskLong
@@ -428,7 +439,20 @@ object NetworkUtils {
             val conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = timeout
             conn.readTimeout = timeout
-            conn.inputStream.bufferedReader().use { it.readText() }
+            conn.instanceFollowRedirects = true
+            
+            val responseCode = conn.responseCode
+            val serverHeader = conn.getHeaderField("Server") ?: ""
+            val wwwAuthenticate = conn.getHeaderField("WWW-Authenticate") ?: ""
+            
+            val body = if (responseCode in 200..299) {
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                ""
+            }
+            
+            // Combine headers and body for fingerprinting
+            return@withContext "Server: $serverHeader\nAuth: $wwwAuthenticate\nBody: $body"
         } catch (e: Exception) { "" }
     }
 }

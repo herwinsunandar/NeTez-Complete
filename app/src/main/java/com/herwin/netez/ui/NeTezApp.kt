@@ -22,7 +22,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -30,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
@@ -110,18 +110,19 @@ fun NeTezApp() {
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFF252A40),
+                containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp
             ) {
                 bottomNavItems.forEach { screen ->
                     val hasBadge = screen == Screen.Security && (dashboardState.breachedEmailCount > 0 || dashboardState.expiringSslCount > 0)
-                    
+                    val isTabSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+
                     NavigationBarItem(
                         icon = { 
                             BadgedBox(
                                 badge = {
                                     if (hasBadge) {
-                                        Badge(containerColor = Color(0xFFEF4444))
+                                        Badge(containerColor = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             ) {
@@ -129,19 +130,28 @@ fun NeTezApp() {
                             }
                         },
                         label = { Text(stringResource(screen.titleRes), style = MaterialTheme.typography.labelSmall) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        selected = isTabSelected,
                         onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
+                            if (isTabSelected) {
+                                // Re-clicking active tab -> pop back to root destination of this tab
+                                if (currentRoute != screen.route) {
+                                    navController.popBackStack(screen.route, inclusive = false)
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            } else {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                         )
                     )

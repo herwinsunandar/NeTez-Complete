@@ -7,6 +7,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -64,7 +65,7 @@ fun BleScannerScreen(viewModel: BleScannerViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -120,20 +121,33 @@ fun BleScannerScreen(viewModel: BleScannerViewModel = viewModel()) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF10B981).copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF10B981)))
+                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondary))
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = "Found ${uiState.devices.size} devices • Scanning ${String.format(Locale.US, "%.1fs", uiState.scanTimeMs / 1000f)} • BLE 5.0",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
+                if (uiState.devices.any { it.isCached }) {
+                    IconButton(
+                        onClick = {
+                            viewModel.clearHistory()
+                            Toast.makeText(context, "History cleared", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear History", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    }
+                }
             }
         }
 
@@ -160,7 +174,7 @@ fun BleScannerScreen(viewModel: BleScannerViewModel = viewModel()) {
         ModalBottomSheet(
             onDismissRequest = { selectedDevice = null },
             sheetState = sheetState,
-            containerColor = Color(0xFF1E2235)
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             BleDetailSheet(
                 device = selectedDevice!!,
@@ -168,6 +182,12 @@ fun BleScannerScreen(viewModel: BleScannerViewModel = viewModel()) {
                 onPair = { 
                     viewModel.pairDevice(selectedDevice?.nativeDevice)
                     selectedDevice = null
+                },
+                onDelete = {
+                    val mac = selectedDevice!!.mac
+                    viewModel.deleteDevice(mac)
+                    selectedDevice = null
+                    Toast.makeText(context, "Removed from history", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -193,14 +213,15 @@ fun BleFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 fun BleDeviceCard(device: BleDevice, onClick: () -> Unit) {
-    val cardBg = Color(0xFF1E2235)
-    val accentColor = if (device.deviceType == BleDeviceType.SMARTWATCH) Color(0xFFA855F7) else Color(0xFF6C8CFF)
+    val cardBg = MaterialTheme.colorScheme.surface
+    val accentColor = if (device.deviceType == BleDeviceType.SMARTWATCH) Color(0xFFA855F7) else MaterialTheme.colorScheme.primary
 
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = cardBg,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
         tonalElevation = 2.dp
     ) {
         Row(
@@ -220,14 +241,14 @@ fun BleDeviceCard(device: BleDevice, onClick: () -> Unit) {
                     tint = accentColor,
                     modifier = Modifier.size(26.dp)
                 )
-                if (device.rssi > -100) {
+                if (device.rssi > -100 && !device.isCached) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF10B981))
+                            .background(MaterialTheme.colorScheme.secondary)
                     )
                 }
             }
@@ -235,37 +256,55 @@ fun BleDeviceCard(device: BleDevice, onClick: () -> Unit) {
             Spacer(Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = device.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    maxLines = 1
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = device.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (device.isPaired || device.isEverConnected) {
+                        Spacer(Modifier.width(6.dp))
+                        Surface(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                            Text("PAIRED", color = MaterialTheme.colorScheme.secondary, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                        }
+                    } else if (device.isCached) {
+                        Spacer(Modifier.width(6.dp))
+                        Surface(color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                            Text("SAVED", color = MaterialTheme.colorScheme.tertiary, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                        }
+                    }
+                }
                 Text(
                     text = "${device.mac} • ${device.vendor}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "${device.rssi} dBm • ${String.format(Locale.US, "%.1fm", device.distance)}",
+                    text = if (device.isCached) "Saved in History" else "${device.rssi} dBm • ${String.format(Locale.US, "%.1fm", device.distance)}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = accentColor.copy(alpha = 0.8f),
+                    color = accentColor,
                     fontWeight = FontWeight.Bold
                 )
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                SignalBars(device.rssi)
+                if (!device.isCached) {
+                    SignalBars(device.rssi)
+                } else {
+                    Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                }
                 Spacer(Modifier.height(8.dp))
                 Button(
-                    onClick = { /* Connect */ },
+                    onClick = onClick,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("CONNECT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text(if (device.isCached) "VIEW" else "CONNECT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -294,16 +333,19 @@ fun SignalBars(rssi: Int) {
 }
 
 @Composable
-fun BleDetailSheet(device: BleDevice, context: Context, onPair: () -> Unit) {
+fun BleDetailSheet(device: BleDevice, context: Context, onPair: () -> Unit, onDelete: () -> Unit) {
     Column(modifier = Modifier.padding(24.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.05f)), contentAlignment = Alignment.Center) {
-                Icon(getBleIcon(device.deviceType), contentDescription = null, tint = Color.White)
+            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
+                Icon(getBleIcon(device.deviceType), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
             Spacer(Modifier.width(16.dp))
-            Column {
-                Text(device.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(device.mac, color = TextGray)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(device.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(device.mac, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
             }
         }
 

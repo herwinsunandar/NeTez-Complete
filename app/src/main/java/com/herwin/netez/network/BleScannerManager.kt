@@ -22,6 +22,8 @@ data class BleDevice(
     val rssi: Int,
     val distance: Double = 0.0,
     val isPaired: Boolean = false,
+    val isEverConnected: Boolean = false,
+    val isCached: Boolean = false,
     val deviceType: BleDeviceType = BleDeviceType.GENERIC,
     val batteryLevel: Int? = null,
     val uuids: List<String> = emptyList(),
@@ -149,13 +151,15 @@ class BleScannerManager(private val context: Context) {
             name = try { device.name } catch (e: SecurityException) { null }
         }
         
+        val shortMac = device.address.takeLast(5).replace(":", "")
+
         if (name.isNullOrEmpty()) {
             val manuData = scanRecord?.manufacturerSpecificData
             if (manuData != null && manuData.size() > 0) {
                 for (i in 0 until manuData.size()) {
                     val id = manuData.keyAt(i)
                     val mName = getManufacturerName(id)
-                    if (mName != null) return "$mName Device"
+                    if (mName != null) return "$mName Device ($shortMac)"
                 }
             }
         }
@@ -163,11 +167,11 @@ class BleScannerManager(private val context: Context) {
         if (name.isNullOrEmpty()) {
             val vendor = detectVendor(device.address)
             if (vendor != "Unknown" && vendor != "Random Address") {
-                return "$vendor Device"
+                return "$vendor Device ($shortMac)"
             }
         }
 
-        return name ?: "Unknown Device"
+        return name ?: "Unknown Device ($shortMac)"
     }
 
     private fun determineReason(name: String, scanRecord: ScanRecord?): String? {

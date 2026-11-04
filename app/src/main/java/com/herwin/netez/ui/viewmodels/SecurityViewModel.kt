@@ -4,22 +4,30 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.herwin.netez.data.AppDatabase
+import com.herwin.netez.data.SecurityPreferences
 import com.herwin.netez.data.entities.SslDomain
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SecurityViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
+    private val securityPrefs = SecurityPreferences(application)
     private val sslDao = db.sslDomainDao()
     private val leakDao = db.leakCheckDao()
     private val passwordDao = db.passwordDao()
     private val phishingDao = db.phishingDao()
     private val deviceDao = db.deviceSecurityDao()
 
+    private val maxDays: Int
+        get() {
+            val configDays = securityPrefs.defaultReminderDays.split(',').mapNotNull { it.trim().toIntOrNull() }
+            return configDays.maxOrNull() ?: 14
+        }
+
     val monitoredDomains = sslDao.getAllDomains()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val expiringCount = sslDao.getExpiringCount()
+    val expiringCount = sslDao.getExpiringCount(maxReminderDays = maxDays)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val expiredCount = sslDao.getExpiredCount()
@@ -31,7 +39,7 @@ class SecurityViewModel(application: Application) : AndroidViewModel(application
     val weakPasswordCount = passwordDao.getWeakCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val totalPasswords = passwordDao.getAllPasswords().map { it.size }
+    val totalPasswords = passwordDao.getAllEntries().map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val securityStats = combine(
@@ -45,7 +53,7 @@ class SecurityViewModel(application: Application) : AndroidViewModel(application
         val phishing = part2.second
         val deviceHistory = part2.third
         
-        val expiring = domains.count { it.daysLeft in 1..14 }
+        val expiring = domains.count { it.daysLeft in 1..maxDays }
         val expired = domains.count { it.daysLeft <= 0 }
         val lastScan = deviceHistory.firstOrNull()
         

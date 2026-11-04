@@ -12,8 +12,8 @@ android {
         applicationId = "com.herwin.netez"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 16
+        versionName = "16.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -26,6 +26,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
         debug {
             isMinifyEnabled = false
@@ -105,6 +108,12 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.security.crypto)
     implementation(libs.sqlcipher)
+    
+    // Google Mobile Ads (AdMob)
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
+    
+    // Google Play Billing
+    implementation("com.android.billingclient:billing-ktx:8.0.0")
     
 
 

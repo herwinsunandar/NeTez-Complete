@@ -25,6 +25,10 @@ import java.net.InetAddress
 import java.text.SimpleDateFormat
 import java.util.*
 
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureAccessState
+import com.herwin.netez.entitlement.FeatureId
+
 class BlacklistViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsManager = SettingsManager(application)
     private val abuseIpDbService = AbuseIpDbService.create()
@@ -42,6 +46,8 @@ class BlacklistViewModel(application: Application) : AndroidViewModel(applicatio
     var riskScore by mutableFloatStateOf(0f)
     var abuseIpDbResponse by mutableStateOf<AbuseIpDbResponse?>(null)
     var shodanResponse by mutableStateOf<ShodanResponse?>(null)
+    var showPaywallDialog by mutableStateOf(false)
+    var showGlobalSupportDialog by mutableStateOf(false)
 
     fun onQueryChange(query: String) {
         inputQuery = query
@@ -64,6 +70,14 @@ class BlacklistViewModel(application: Application) : AndroidViewModel(applicatio
             error = "Please enter an IP or Domain"
             return
         }
+
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        val accessState = accessManager.checkAccess(FeatureId.BLACKLIST_CHECK_DAILY)
+        if (accessState == FeatureAccessState.LIMIT_REACHED) {
+            showPaywallDialog = true
+            return
+        }
+        accessManager.consumeQuota(FeatureId.BLACKLIST_CHECK_DAILY)
         
         inputQuery = input
         isScanning = true
@@ -199,6 +213,9 @@ class BlacklistViewModel(application: Application) : AndroidViewModel(applicatio
             }
             
             isScanning = false
+            if (accessManager.trackAndCheckGlobalToolUsage()) {
+                showGlobalSupportDialog = true
+            }
         }
     }
 

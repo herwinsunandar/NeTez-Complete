@@ -19,21 +19,25 @@ import com.herwin.netez.ui.AppIcons
 
 @Composable
 fun ToolItem(
-    title: String, 
-    subtitle: String, 
-    painter: Painter, 
+    title: String,
+    subtitle: String,
+    painter: Painter,
     showBadge: Boolean = false,
     badgeText: String = "NEW",
     isError: Boolean = false,
     showDot: Boolean = false,
-    dotColor: Color = Color(0xFF10B981),
+    dotColor: Color = MaterialTheme.colorScheme.secondary,
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
-        color = Color(0xFF1E2235),
-        border = if (isError) BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)) else null,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            1.dp,
+            if (isError) MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        ),
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -45,46 +49,45 @@ fun ToolItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF6C8CFF).copy(alpha = 0.2f)),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painter, 
-                    contentDescription = null, 
-                    tint = Color(0xFF6C8CFF),
-                    modifier = Modifier.size(28.dp)
+                    painter = painter,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            
+
             Spacer(Modifier.width(16.dp))
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = title, 
-                        style = MaterialTheme.typography.titleMedium, 
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (showBadge) {
                         Spacer(Modifier.width(8.dp))
                         Surface(
-                            color = if (isError) Color(0xFFEF4444) else Color(0xFF6C8CFF),
-                            shape = RoundedCornerShape(4.dp)
+                            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                badgeText, 
+                                text = badgeText,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                color = Color.White,
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Black
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
-                    
+
                     if (showDot) {
                         Spacer(Modifier.width(8.dp))
                         Box(
@@ -97,17 +100,16 @@ fun ToolItem(
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = subtitle, 
-                    style = MaterialTheme.typography.bodySmall, 
-                    color = Color(0xFF8B92B5),
-                    fontSize = 13.sp
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Icon(
                 painter = AppIcons.chevronRight(),
                 contentDescription = null,
-                tint = Color(0xFF4B516E),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }

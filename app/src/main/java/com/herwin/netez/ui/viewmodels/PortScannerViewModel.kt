@@ -1,5 +1,10 @@
 package com.herwin.netez.ui.viewmodels
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.herwin.netez.entitlement.FeatureAccessManager
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +12,7 @@ import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.data.TestResult
 import com.herwin.netez.network.PortResult
 import com.herwin.netez.network.PortScanner
+import com.herwin.netez.utils.NetworkUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,7 +28,7 @@ enum class PortRangeOption {
 }
 
 data class PortScannerState(
-    val ip: String = "192.168.1.1",
+    val ip: String = "",
     val results: List<PortResult> = emptyList(),
     val isScanning: Boolean = false,
     val filter: PortFilter = PortFilter.ALL,
@@ -38,7 +44,7 @@ data class PortScannerState(
             PortFilter.OPEN -> results.filter { it.isOpen }
             PortFilter.CLOSED -> results.filter { !it.isOpen }
         }
-    
+
     val openCount: Int get() = results.count { it.isOpen }
 }
 
@@ -46,6 +52,8 @@ class PortScannerViewModel(application: Application) : AndroidViewModel(applicat
     private val _uiState = MutableStateFlow(PortScannerState())
     val uiState: StateFlow<PortScannerState> = _uiState
     private val dao = AppDatabase.getDatabase(application).testResultDao()
+
+    var showGlobalSupportDialog by mutableStateOf(false)
 
     fun updateIp(newIp: String) {
         _uiState.value = _uiState.value.copy(ip = newIp)
@@ -56,7 +64,10 @@ class PortScannerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun updateRange(option: PortRangeOption, custom: String = "") {
-        _uiState.value = _uiState.value.copy(rangeOption = option, customRange = if (custom.isNotEmpty()) custom else _uiState.value.customRange)
+        _uiState.value = _uiState.value.copy(
+            rangeOption = option,
+            customRange = if (custom.isNotEmpty()) custom else _uiState.value.customRange
+        )
     }
 
     fun toggleProtocol() {
@@ -66,6 +77,10 @@ class PortScannerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun startScan() {
         val state = _uiState.value
+        val targetIp = state.ip.trim().ifBlank {
+            NetworkUtils.getLocalIpAddress() ?: "192.168.1.1"
+        }
+
         val portsToScan = when (state.rangeOption) {
             PortRangeOption.COMMON -> PortScanner.commonPorts
             PortRangeOption.TOP_100 -> PortScanner.top100Ports
@@ -73,13 +88,19 @@ class PortScannerViewModel(application: Application) : AndroidViewModel(applicat
             PortRangeOption.CUSTOM -> parseRange(state.customRange)
         }
 
-        _uiState.value = _uiState.value.copy(isScanning = true, results = emptyList(), scanTimeMs = 0)
+        _uiState.value = _uiState.value.copy(
+            isScanning = true,
+            results = emptyList(),
+            scanTimeMs = 0,
+            ip = state.ip.ifBlank { targetIp }
+        )
+
         viewModelScope.launch {
             var results: List<PortResult>
             val time = measureTimeMillis {
-                results = PortScanner.scanPorts(state.ip, portsToScan, state.protocol)
+                results = PortScanner.scanPorts(targetIp, portsToScan, state.protocol)
             }
-            
+
             val detectedDevice = detectDevice(results)
 
             _uiState.value = _uiState.value.copy(
@@ -88,8 +109,13 @@ class PortScannerViewModel(application: Application) : AndroidViewModel(applicat
                 scanTimeMs = time,
                 deviceType = detectedDevice
             )
-            
+
             saveToHistory(results.count { it.isOpen }, portsToScan.size, time, detectedDevice)
+
+            val accessManager = FeatureAccessManager.getInstance(getApplication())
+            if (accessManager.trackAndCheckGlobalToolUsage()) {
+                showGlobalSupportDialog = true
+            }
         }
     }
 
@@ -118,11 +144,13 @@ class PortScannerViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun saveToHistory(open: Int, total: Int, time: Long, device: String) {
         viewModelScope.launch {
-            dao.insertResult(TestResult(
-                type = "PortScan",
-                target = _uiState.value.ip,
-                result = String.format(Locale.US, "%d Open / %d Ports • %.1fs • %s", open, total, time / 1000f, device)
-            ))
+            dao.insertResult(
+                TestResult(
+                    type = "PortScan",
+                    target = _uiState.value.ip,
+                    result = String.format(Locale.US, "%d Open / %d Ports • %.1fs • %s", open, total, time / 1000f, device)
+                )
+            )
         }
     }
 }

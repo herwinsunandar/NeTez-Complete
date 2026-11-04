@@ -3,6 +3,7 @@ package com.herwin.netez.ui.viewmodels
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.herwin.netez.R
 import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.data.IspRating
 import com.herwin.netez.data.IspReview
@@ -71,8 +72,8 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
                 pricePerMbps = 5600.0, 
                 rating = 3.8f, 
                 reviewCount = 120,
-                pros = "Jangkauan luas, Tersedia di pelosok, Bundling TV stabil",
-                cons = "Upload tidak simetris, FUP ketat, Latensi internasional fluktuatif"
+                pros = getApplication<Application>().getString(R.string.isp_indihome_pros),
+                cons = getApplication<Application>().getString(R.string.isp_indihome_cons)
             ),
             IspRating(
                 ispName = "Biznet Home", 
@@ -83,8 +84,8 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
                 pricePerMbps = 4100.0, 
                 rating = 4.5f, 
                 reviewCount = 85,
-                pros = "Kecepatan Simetris (1:1), Latensi gaming sangat rendah, Tanpa FUP",
-                cons = "Coverage belum merata, Harga router awal cukup tinggi"
+                pros = getApplication<Application>().getString(R.string.isp_biznet_pros),
+                cons = getApplication<Application>().getString(R.string.isp_biznet_cons)
             ),
             IspRating(
                 ispName = "MyRepublic", 
@@ -95,8 +96,8 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
                 pricePerMbps = 4500.0, 
                 rating = 4.2f, 
                 reviewCount = 64,
-                pros = "Paket gaming dedicated, IP Public tersedia, Harga kompetitif",
-                cons = "Customer service slow response, Kabel sering maintenance"
+                pros = getApplication<Application>().getString(R.string.isp_myrep_pros),
+                cons = getApplication<Application>().getString(R.string.isp_myrep_cons)
             ),
             IspRating(
                 ispName = "First Media", 
@@ -107,8 +108,8 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
                 pricePerMbps = 6200.0, 
                 rating = 3.5f, 
                 reviewCount = 95,
-                pros = "Saluran TV kabel terbaik, Kualitas gambar HD jernih",
-                cons = "Masih menggunakan Coaxial, Sering gangguan cuaca, Upload lambat"
+                pros = getApplication<Application>().getString(R.string.isp_firstmedia_pros),
+                cons = getApplication<Application>().getString(R.string.isp_firstmedia_cons)
             ),
             IspRating(
                 ispName = "Oxygen.id", 

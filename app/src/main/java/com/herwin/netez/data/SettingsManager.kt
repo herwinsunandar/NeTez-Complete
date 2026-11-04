@@ -11,7 +11,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 
 class SettingsManager(private val context: Context) {
     companion object {
-        val THEME_KEY = stringPreferencesKey("theme_mode") // "light", "dark", "system"
+        val THEME_KEY = stringPreferencesKey("theme_mode") // "system", "dynamic", "dark"
         val LANGUAGE_KEY = stringPreferencesKey("language") // "en", "in", "system"
         val ABUSE_IPDB_KEY = stringPreferencesKey("abuse_ipdb_key")
         val SHODAN_KEY = stringPreferencesKey("shodan_key")

@@ -2,25 +2,17 @@ package com.herwin.netez.engine
 
 import android.app.KeyguardManager
 import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.os.Build
 import android.provider.Settings
 import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.data.RiskCategory
 import com.herwin.netez.network.AppScannerManager
 import com.herwin.netez.network.NetworkInfoProvider
 import com.herwin.netez.network.UnifiedNetworkInfo
-import com.herwin.netez.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.Socket
-import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 data class SecurityPostureResult(
@@ -56,12 +48,12 @@ enum class Action {
 
 object SecurityPostureEngine {
 
-    suspend fun calculate(context: Context): SecurityPostureResult = withContext(Dispatchers.IO) {
+    suspend fun calculate(context: Context, quickOnly: Boolean = false): SecurityPostureResult = withContext(Dispatchers.IO) {
         val netInfo = NetworkInfoProvider.getUnifiedNetworkInfo(context)
         val db = AppDatabase.getDatabase(context)
-        
+
         // 1. Device Security - Get from history if available
-        val lastDeviceCheck = db.deviceSecurityDao().getAllHistoryList()
+        val lastDeviceCheck = try { db.deviceSecurityDao().getAllHistoryList() } catch (e: Exception) { emptyList() }
         val deviceData = if (lastDeviceCheck.isNotEmpty()) {
             val last = lastDeviceCheck.first()
             last.score to "${last.criticalCount} Critical, ${last.warningCount} Warning"
@@ -73,10 +65,12 @@ object SecurityPostureEngine {
 
         // 2. Network Security - Get from WiFi history if available
         val networkData = if (netInfo.isWifi) {
-            val audit = db.wifiAuditDao().getAuditByBssid(netInfo.wifiCaps ?: "") 
-                ?: db.wifiAuditDao().getAuditByBssid(netInfo.ssidOrOperator) 
-                ?: db.wifiAuditDao().getLastAudit()
-            
+            val audit = try {
+                db.wifiAuditDao().getAuditByBssid(netInfo.wifiCaps ?: "")
+                    ?: db.wifiAuditDao().getAuditByBssid(netInfo.ssidOrOperator)
+                    ?: db.wifiAuditDao().getLastAudit()
+            } catch (e: Exception) { null }
+
             if (audit != null && (System.currentTimeMillis() - audit.timestamp < TimeUnit.HOURS.toMillis(24))) {
                 audit.score to "${audit.criticalCount} Critical, ${audit.warningCount} Warning"
             } else {
@@ -88,17 +82,23 @@ object SecurityPostureEngine {
         val networkScore = networkData.first
         val networkSummary = networkData.second
 
-        // 3. App Security
-        val scanner = AppScannerManager(context)
-        val appsList = scanner.scanApps()
-        val dangerousCount = appsList.count { it.riskCategory == RiskCategory.DANGEROUS }
+        // 3. App Security - Skip heavy package scanning on quick network transition
+        val dangerousCount = if (quickOnly) {
+            0
+        } else {
+            try {
+                val scanner = AppScannerManager(context)
+                val appsList = scanner.scanApps()
+                appsList.count { it.riskCategory == RiskCategory.DANGEROUS }
+            } catch (e: Exception) { 0 }
+        }
         val appScore = 100 - (dangerousCount * 30).coerceAtMost(90)
 
         // 4. Privacy
-        val weakPasswords = db.passwordDao().getWeakCountSync()
-        val breachedCount = db.leakCheckDao().getBreachedCountSync()
+        val weakPasswords = try { db.passwordDao().getWeakCountSync() } catch (e: Exception) { 0 }
+        val breachedCount = try { db.leakCheckDao().getBreachedCountSync() } catch (e: Exception) { 0 }
         val vpnOn = isVpnActive(context)
-        
+
         val privacyScores = mutableListOf<Int>()
         privacyScores.add((weakPasswords * 15).coerceAtMost(60))
         privacyScores.add((breachedCount * 20).coerceAtMost(80))
@@ -115,14 +115,14 @@ object SecurityPostureEngine {
 
         // Issues build
         val issues = mutableListOf<Issue>()
-        val adbOn = Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
+        val adbOn = try { Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) == 1 } catch (e: Exception) { false }
         if (adbOn) issues.add(Issue(Severity.WARNING, "USB Debugging enabled", "Disable in Developer Options", Action.OPEN_DEVICE_CHECK, 60))
         if (netInfo.isWifi && (netInfo.wifiCaps?.contains("WPS") == true)) {
             issues.add(Issue(Severity.CRITICAL, "WPS ON - 2 sec hack", "Disable WPS in router settings", Action.OPEN_WIFI_AUDIT, 70))
         }
         if (dangerousCount > 0) issues.add(Issue(Severity.CRITICAL, "$dangerousCount apps have high-risk permissions", "Review dangerous apps in scanner", Action.OPEN_APP_SCANNER, 70))
-        val sslExpiring = db.sslDomainDao().getExpiringCountSync()
-        if (sslExpiring > 0) issues.add(Issue(Severity.WARNING, "$sslExpiring SSL will expire", "View expiring certificates", Action.OPEN_SSL_REMINDER, 40))
+        val sslExpiring = try { db.sslDomainDao().getExpiringCountSync() } catch (e: Exception) { 0 }
+        if (sslExpiring > 0) issues.add(Issue(Severity.WARNING, "$sslExpiring SSL/TLS domain issue(s)", "View expiring certificates or Grade F domains", Action.OPEN_SSL_REMINDER, 40))
 
         SecurityPostureResult(
             overallScore = overall,
@@ -144,7 +144,7 @@ object SecurityPostureEngine {
         devicePenalties.add(if (checkRootQuick()) 100 else 0)
         val km = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         devicePenalties.add(if (!km.isDeviceSecure) 80 else 0)
-        val devOn = Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1
+        val devOn = try { Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1 } catch (e: Exception) { false }
         devicePenalties.add(if (devOn) 30 else 0)
         val score = 100 - (devicePenalties.average().toInt().coerceIn(0, 100))
         return score to "Quick Scan Active"
@@ -175,7 +175,9 @@ object SecurityPostureEngine {
     }
 
     private fun isVpnActive(context: Context): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        return cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ?: false
+        return try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ?: false
+        } catch (e: Exception) { false }
     }
 }

@@ -1,15 +1,10 @@
 package com.herwin.netez.ui.screens
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
-import android.provider.Settings
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
@@ -34,13 +28,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.R
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureId
 import com.herwin.netez.network.WifiAuditResult
 import com.herwin.netez.network.WifiCheckAction
 import com.herwin.netez.network.WifiCheckItem
 import com.herwin.netez.network.WifiCheckStatus
 import com.herwin.netez.ui.AppIcons
-import com.herwin.netez.ui.theme.PremiumNavy
+import com.herwin.netez.ui.components.ContextualPaywallDialog
 import com.herwin.netez.ui.theme.SoftDarkBg
+import com.herwin.netez.ui.theme.SoftTechSecondary
+import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.WifiSecurityViewModel
 
@@ -53,11 +51,35 @@ fun WifiSecurityScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val accessManager = remember { FeatureAccessManager.getInstance(context) }
+    var showPaywallDialog by remember { mutableStateOf(false) }
+
+    val pdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri: Uri? ->
+        uri?.let { viewModel.exportPdfReport(context, it) }
+    }
+
+    if (showPaywallDialog) {
+        ContextualPaywallDialog(
+            featureId = FeatureId.REPORT_EXPORT,
+            limitText = "Professional Wi-Fi Security Audit PDF Report export is available in NeTez PRO.",
+            onDismiss = { showPaywallDialog = false },
+            onUpgradeClick = {}
+        )
+    }
+
+    LaunchedEffect(viewModel.actionMessage) {
+        viewModel.actionMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.actionMessage = null
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // 1. Header with Connected WiFi
         uiState.auditResult?.let { result ->
@@ -74,43 +96,51 @@ fun WifiSecurityScreen(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                // 3. Score Card
+                // 3. Score Card & Report Actions
                 item {
-                    SecurityScoreCard(result)
+                    SecurityScoreCard(
+                        result = result,
+                        context = context,
+                        viewModel = viewModel,
+                        onExportPdf = {
+                            if (!accessManager.isPro()) {
+                                showPaywallDialog = true
+                            } else {
+                                val cleanSsid = (result.ssid ?: "Wifi").replace(Regex("[^a-zA-Z0-9]"), "_")
+                                pdfExportLauncher.launch("WiFi_Audit_${cleanSsid}.pdf")
+                            }
+                        }
+                    )
                 }
 
-                // 4. Findings Summary
-                item {
-                    FindingsSummaryRow(result, viewModel, context, onNavigateToDnsLeakTest)
-                }
-
-                // 5. Category Breakdown
+                // 4. Category Breakdown
                 item {
                     CategoryBreakdownList(result.categoryScores)
                 }
 
-                // 6. Audit Details List
-                item {
-                    Text(
-                        stringResource(R.string.wifi_audit_details_header),
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                        color = TextGray,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 11.sp,
-                        letterSpacing = 1.sp
-                    )
-                }
+                // 5. Checklist Items
                 items(result.checks) { check ->
-                    AuditDetailCard(check, result.gateway ?: "192.168.1.1", onNavigateToLanScanner)
-                }
-
-                // 7. Secure WiFi Checklist
-                item {
-                    SecureWiFiChecklist(result)
+                    AuditCheckCard(check, onNavigateToLanScanner, onNavigateToDnsLeakTest)
                 }
             }
         } ?: run {
-            Box(modifier = Modifier.weight(1f))
+            if (!uiState.isScanning) {
+                EmptyAuditPlaceholder()
+            }
+        }
+    }
+}
+
+@Composable
+fun WelcomeWifiHeader() {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        color = SoftDarkBg,
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(stringResource(R.string.security_wifi_audit_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(stringResource(R.string.security_wifi_audit_desc), style = MaterialTheme.typography.bodySmall, color = TextGray)
         }
     }
 }
@@ -158,45 +188,39 @@ fun ConnectedWifiCard(result: WifiAuditResult, viewModel: WifiSecurityViewModel,
 }
 
 @Composable
-fun WelcomeWifiHeader() {
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(16.dp).height(200.dp),
-        contentAlignment = Alignment.Center
+fun InfoChip(label: String, color: Color) {
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
     ) {
-        Box(
-            modifier = Modifier.size(140.dp).background(Brush.radialGradient(colors = listOf(Color(0xFF6C8CFF).copy(alpha = 0.15f), Color.Transparent)))
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Surface(modifier = Modifier.size(100.dp), color = SoftDarkBg, shape = CircleShape, border = BorderStroke(2.dp, Color(0xFF6C8CFF).copy(alpha = 0.2f))) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(AppIcons.wifiShield(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(56.dp))
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(stringResource(R.string.security_wifi_audit_desc), color = TextGray, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-        }
+        Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
     }
 }
 
 @Composable
-fun ScanControlRow(isScanning: Boolean, onStartScan: () -> Unit, onNavigateToLanScanner: () -> Unit) {
+fun ScanControlRow(
+    isScanning: Boolean,
+    onStartScan: () -> Unit,
+    onNavigateToLanScanner: () -> Unit
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Button(
             onClick = onStartScan,
+            enabled = !isScanning,
             modifier = Modifier.weight(1f).height(56.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF)),
-            enabled = !isScanning
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))
         ) {
             if (isScanning) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 3.dp)
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
             } else {
-                Icon(AppIcons.scan(), null)
+                Icon(AppIcons.shieldCheck(), null)
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.wifi_audit_scan), fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.wifi_audit_scan), fontWeight = FontWeight.Bold)
             }
         }
         
@@ -214,7 +238,12 @@ fun ScanControlRow(isScanning: Boolean, onStartScan: () -> Unit, onNavigateToLan
 }
 
 @Composable
-fun SecurityScoreCard(result: WifiAuditResult) {
+fun SecurityScoreCard(
+    result: WifiAuditResult,
+    context: Context,
+    viewModel: WifiSecurityViewModel,
+    onExportPdf: () -> Unit
+) {
     val scoreColor = when {
         result.securityScore >= 90 -> Color(0xFF10B981)
         result.securityScore >= 75 -> Color(0xFF10B981)
@@ -278,6 +307,59 @@ fun SecurityScoreCard(result: WifiAuditResult) {
                 ScoreIndicator(stringResource(R.string.wifi_audit_suspicious), "${result.warningCount}", Color(0xFFFBBF24))
                 ScoreIndicator(stringResource(R.string.wifi_audit_critical_label), "${result.criticalCount}", Color(0xFFEF4444))
             }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+            Spacer(Modifier.height(16.dp))
+
+            // Export Actions Row (1 Row Side-By-Side)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = { viewModel.copyReportToClipboard(context) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    Icon(painter = AppIcons.contentCopy(), contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                    Spacer(Modifier.width(4.dp))
+                    Text("COPY", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                }
+
+                OutlinedButton(
+                    onClick = { viewModel.shareReport(context) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    Icon(painter = AppIcons.share(), contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                    Spacer(Modifier.width(4.dp))
+                    Text("SHARE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                }
+
+                Button(
+                    onClick = onExportPdf,
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    Icon(painter = AppIcons.download(), contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("PDF REPORT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                }
+            }
         }
     }
 }
@@ -318,22 +400,22 @@ fun CategoryRow(category: String, score: Int) {
         else -> R.string.nav_scanner to 10
     }
     
-    val percentage = score.toFloat() / maxWeight
+    val pct = (score.toFloat() / maxWeight).coerceIn(0f, 1f)
     val color = when {
-        percentage >= 0.9f -> Color(0xFF10B981)
-        percentage >= 0.7f -> Color(0xFFFBBF24)
+        pct >= 0.8f -> Color(0xFF10B981)
+        pct >= 0.5f -> Color(0xFFFBBF24)
         else -> Color(0xFFEF4444)
     }
 
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(stringResource(labelRes), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            Text("$score / $maxWeight", color = color, fontSize = 12.sp, fontWeight = FontWeight.Black)
+            Text(stringResource(labelRes), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("$score / $maxWeight", color = color, fontSize = 12.sp, fontFamily = TechMonospace, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(6.dp))
         LinearProgressIndicator(
-            progress = { percentage },
-            modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+            progress = { pct },
+            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
             color = color,
             trackColor = Color.White.copy(alpha = 0.05f)
         )
@@ -341,132 +423,67 @@ fun CategoryRow(category: String, score: Int) {
 }
 
 @Composable
-fun FindingsSummaryRow(result: WifiAuditResult, viewModel: WifiSecurityViewModel, context: Context, onNavigateToDnsLeakTest: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val findings = mutableListOf<String>()
-        if (result.criticalCount > 0) findings.add("${result.criticalCount} Critical")
-        if (result.warningCount > 0) findings.add("${result.warningCount} Warning")
-        
-        val summaryText = if (findings.isEmpty()) "No Security Issues Found" else findings.joinToString(" • ")
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(summaryText, color = if (result.criticalCount > 0) Color(0xFFEF4444) else if (result.warningCount > 0) Color(0xFFFBBF24) else Color(0xFF10B981), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            
-            val hasPublicDns = result.dnsServers.any { it == "8.8.8.8" || it == "8.8.4.4" || it == "1.1.1.1" || it == "9.9.9.9" }
-            if (hasPublicDns) {
-                Text(
-                    text = "Check if leaking →",
-                    color = Color(0xFF6C8CFF),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onNavigateToDnsLeakTest() }.padding(top = 4.dp)
-                )
-            }
-        }
-        
-        Row {
-            IconButton(onClick = { 
-                viewModel.copyReportToClipboard(context)
-                Toast.makeText(context, context.getString(R.string.wifi_audit_report_copied), Toast.LENGTH_SHORT).show()
-            }, modifier = Modifier.size(32.dp)) {
-                Icon(AppIcons.contentCopy(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(18.dp))
-            }
-            IconButton(onClick = { viewModel.shareReport(context) }, modifier = Modifier.size(32.dp)) {
-                Icon(AppIcons.share(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(18.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun AuditDetailCard(check: WifiCheckItem, gateway: String, onNavigateToLanScanner: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    
-    val statusColor = when (check.status) {
-        WifiCheckStatus.SAFE -> Color(0xFF10B981)
-        WifiCheckStatus.WARNING -> Color(0xFFFBBF24)
-        WifiCheckStatus.CRITICAL -> Color(0xFFEF4444)
-        WifiCheckStatus.INFO -> Color(0xFF6C8CFF)
-        WifiCheckStatus.UNKNOWN -> Color(0xFF9CA3AF)
+fun AuditCheckCard(
+    check: WifiCheckItem,
+    onNavigateToLanScanner: () -> Unit,
+    onNavigateToDnsLeakTest: () -> Unit
+) {
+    val (statusColor, icon) = when(check.status) {
+        WifiCheckStatus.CRITICAL -> Color(0xFFEF4444) to AppIcons.warning()
+        WifiCheckStatus.WARNING -> Color(0xFFFBBF24) to AppIcons.warning()
+        WifiCheckStatus.SAFE -> Color(0xFF10B981) to AppIcons.checkCircle()
+        else -> TextGray to AppIcons.info()
     }
 
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         color = SoftDarkBg,
         shape = RoundedCornerShape(16.dp),
-        border = if (expanded) BorderStroke(1.dp, statusColor.copy(alpha = 0.3f)) else null
+        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
     ) {
-        Column(modifier = Modifier.clickable { expanded = !expanded }.padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(12.dp).clip(CircleShape).background(statusColor))
-                Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    val nameText = if (check.nameRes == R.string.wifi_audit_gateway) {
-                        stringResource(check.nameRes, gateway)
-                    } else {
-                        stringResource(check.nameRes)
-                    }
-                    Text(nameText, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(check.detail, color = TextGray, fontSize = 12.sp)
-                }
-                Icon(
-                    painter = if (expanded) AppIcons.expandLess() else AppIcons.expandMore(),
-                    contentDescription = null,
-                    tint = TextGray,
-                    modifier = Modifier.size(20.dp)
+                Icon(painter = icon, contentDescription = null, tint = statusColor, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = stringResource(check.nameRes),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    modifier = Modifier.weight(1f)
                 )
+                check.score?.let { score ->
+                    Text("+$score", color = statusColor, fontFamily = TechMonospace, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
             }
-            
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(modifier = Modifier.padding(top = 16.dp)) {
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                    Spacer(Modifier.height(12.dp))
-                    
-                    Text(stringResource(R.string.wifi_audit_why_it_matters), color = Color.White.copy(alpha = 0.5f), fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 0.5.sp)
-                    Text(
-                        if (check.status == WifiCheckStatus.UNKNOWN) stringResource(R.string.wifi_audit_unknown_desc) 
-                        else stringResource(R.string.wifi_audit_why_it_matters_desc),
-                        color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                    
-                    check.recommendation?.let { rec ->
-                        Spacer(Modifier.height(12.dp))
-                        Text(stringResource(R.string.wifi_audit_rec), color = statusColor, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 0.5.sp)
-                        Text(rec, color = Color.White, fontSize = 13.sp, lineHeight = 18.sp)
-                    }
-                    
-                    check.action?.let { action ->
-                        Spacer(Modifier.height(16.dp))
-                        Button(
-                            onClick = { 
-                                if (action == WifiCheckAction.OPEN_LAN_SCANNER) {
-                                    onNavigateToLanScanner()
-                                } else {
-                                    handleAuditAction(context, action, gateway) 
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().height(42.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = statusColor.copy(alpha = 0.15f), contentColor = statusColor),
-                            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.3f))
-                        ) {
-                            Text(getActionLabel(action, context), fontSize = 12.sp, fontWeight = FontWeight.Black)
+
+            Spacer(Modifier.height(8.dp))
+            Text(check.detail, color = TextGray, fontSize = 12.sp)
+
+            check.recommendation?.let { rec ->
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    color = Color.White.copy(alpha = 0.03f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("💡 $rec", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, modifier = Modifier.padding(8.dp))
+                }
+            }
+
+            check.action?.let { action ->
+                Spacer(Modifier.height(8.dp))
+                TextButton(
+                    onClick = {
+                        when (action) {
+                            WifiCheckAction.OPEN_LAN_SCANNER -> onNavigateToLanScanner()
+                            WifiCheckAction.OPEN_PRIVATE_DNS_SETTINGS -> onNavigateToDnsLeakTest()
+                            else -> {}
                         }
-                    }
-                    
-                    if (check.durationMs != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(stringResource(R.string.wifi_audit_duration_label, check.durationMs), color = TextGray, fontSize = 10.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = SoftTechSecondary)
+                ) {
+                    Text("FIX ISSUE →", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -474,134 +491,17 @@ fun AuditDetailCard(check: WifiCheckItem, gateway: String, onNavigateToLanScanne
 }
 
 @Composable
-fun SecureWiFiChecklist(result: WifiAuditResult) {
-    val items = listOf(
-        R.string.wifi_audit_checklist_wpa23 to (result.checks.any { it.id == "encryption" && it.status == WifiCheckStatus.SAFE }),
-        R.string.wifi_audit_checklist_wps_off to (result.checks.any { it.id == "wps" && it.status == WifiCheckStatus.SAFE }),
-        R.string.wifi_audit_checklist_strong_pass to null, // Manual
-        R.string.wifi_audit_checklist_admin_pass to null, // Manual
-        R.string.wifi_audit_checklist_https_mgmt to (result.checks.any { it.id == "gateway_ports" && it.status == WifiCheckStatus.SAFE }),
-        R.string.wifi_audit_checklist_telnet_off to (result.checks.any { it.id == "gateway_ports" && it.status != WifiCheckStatus.CRITICAL }),
-        R.string.wifi_audit_checklist_firmware to null, // Manual
-        R.string.wifi_audit_checklist_guest to null, // Manual
-        R.string.wifi_audit_checklist_isolation to (result.checks.any { it.id == "isolation" && it.status == WifiCheckStatus.SAFE })
-    )
-    
-    val completedCount = items.count { it.second == true }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        color = SoftDarkBg,
-        shape = RoundedCornerShape(24.dp)
+fun EmptyAuditPlaceholder() {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(stringResource(R.string.wifi_audit_checklist_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.height(12.dp))
-            
-            items.forEach { (resId, status) ->
-                ChecklistItem(stringResource(resId), status)
-            }
-            
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(AppIcons.wifiShield(), null, tint = TextGray.copy(alpha = 0.2f), modifier = Modifier.size(80.dp))
             Spacer(Modifier.height(16.dp))
-            LinearProgressIndicator(
-                progress = { completedCount / items.size.toFloat() },
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                color = Color(0xFF6C8CFF),
-                trackColor = Color.White.copy(alpha = 0.05f)
-            )
-            Text(stringResource(R.string.wifi_audit_verified_count, completedCount, items.size), color = TextGray, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+            Text("No Audit Run Yet", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(Modifier.height(4.dp))
+            Text("Tap 'Start Audit' above to run a comprehensive security analysis on your connected Wi-Fi network.", color = TextGray, fontSize = 12.sp, textAlign = TextAlign.Center)
         }
-    }
-}
-
-@Composable
-fun ChecklistItem(label: String, status: Boolean?) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Icon(
-            painter = when(status) {
-                true -> AppIcons.checkCircle()
-                false -> AppIcons.cancel()
-                else -> AppIcons.info()
-            },
-            contentDescription = null,
-            tint = when(status) {
-                true -> Color(0xFF10B981)
-                false -> Color(0xFFEF4444)
-                else -> TextGray
-            },
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(label, color = if (status == null) TextGray else Color.White, fontSize = 13.sp)
-    }
-}
-
-@Composable
-fun InfoChip(label: String, color: Color) {
-    Surface(
-        color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
-    ) {
-        Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-    }
-}
-
-fun handleAuditAction(context: Context, action: WifiCheckAction, gateway: String) {
-    when (action) {
-        WifiCheckAction.OPEN_ROUTER -> {
-            try {
-                val url = if (!gateway.startsWith("http")) "http://$gateway" else gateway
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.wifi_audit_router_fail), Toast.LENGTH_SHORT).show()
-            }
-        }
-        WifiCheckAction.OPEN_WIFI_SETTINGS -> {
-            try {
-                val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            } catch (e: Exception) {}
-        }
-        WifiCheckAction.OPEN_PRIVATE_DNS_SETTINGS -> {
-            try {
-                val intent = Intent("android.settings.PRIVATE_DNS_SETTINGS")
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                try {
-                    val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
-                } catch (ex: Exception) {}
-            }
-        }
-        WifiCheckAction.OPEN_VPN_SETTINGS -> {
-            try {
-                val intent = Intent("android.net.vpn.SETTINGS")
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                try {
-                    val intent = Intent(Settings.ACTION_VPN_SETTINGS)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
-                } catch (ex: Exception) {}
-            }
-        }
-        WifiCheckAction.OPEN_LAN_SCANNER -> {} // Handled in UI callback
-    }
-}
-
-fun getActionLabel(action: WifiCheckAction, context: Context): String {
-    return when (action) {
-        WifiCheckAction.OPEN_ROUTER -> context.getString(R.string.wifi_audit_how_to_fix)
-        WifiCheckAction.OPEN_WIFI_SETTINGS -> context.getString(R.string.nav_settings)
-        WifiCheckAction.OPEN_PRIVATE_DNS_SETTINGS -> context.getString(R.string.diag_dns)
-        WifiCheckAction.OPEN_VPN_SETTINGS -> "VPN"
-        WifiCheckAction.OPEN_LAN_SCANNER -> context.getString(R.string.scan_lan)
     }
 }

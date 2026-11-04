@@ -1,5 +1,10 @@
 package com.herwin.netez.ui.viewmodels
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.herwin.netez.entitlement.FeatureAccessManager
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -37,6 +42,8 @@ class SpeedTestViewModel(application: Application) : AndroidViewModel(applicatio
     val uiState: StateFlow<SpeedTestState> = _uiState
     private val dao = AppDatabase.getDatabase(application).testResultDao()
 
+    var showGlobalSupportDialog by mutableStateOf(false)
+
     init {
         detectIsp()
     }
@@ -60,6 +67,11 @@ class SpeedTestViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun startTest() {
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        if (accessManager.trackAndCheckGlobalToolUsage()) {
+            showGlobalSupportDialog = true
+        }
+
         val server = _uiState.value.selectedServer
         val downloadUrl = if (server.contains("http")) server else "https://$server/__down?bytes=50000000"
         val uploadUrl = if (server.contains("http")) server else "https://$server/__up"
@@ -103,6 +115,11 @@ class SpeedTestViewModel(application: Application) : AndroidViewModel(applicatio
                 
                 _uiState.value = _uiState.value.copy(isRunning = false, stage = SpeedTestStage.FINISHED, progress = 1f)
                 saveToHistory()
+
+                val accessManager = FeatureAccessManager.getInstance(getApplication())
+                if (accessManager.trackAndCheckGlobalToolUsage()) {
+                    showGlobalSupportDialog = true
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isRunning = false, error = e.message)
             }

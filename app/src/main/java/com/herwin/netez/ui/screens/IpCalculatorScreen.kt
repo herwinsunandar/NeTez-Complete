@@ -1,6 +1,7 @@
 package com.herwin.netez.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -8,8 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,26 +18,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.tooling.preview.Preview
 import com.herwin.netez.ui.AppIcons
-import com.herwin.netez.ui.theme.NeTezTheme
-import com.herwin.netez.ui.theme.PremiumNavy
-import com.herwin.netez.ui.theme.SoftDarkBg
-import com.herwin.netez.ui.theme.TextGray
+import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.viewmodels.IpCalculatorViewModel
 import com.herwin.netez.utils.IpCalculator
-import com.herwin.netez.utils.VlsmSubnet
-
-@Preview(showBackground = true)
-@Composable
-fun IpCalculatorScreenPreview() {
-    NeTezTheme(darkTheme = true) {
-        IpCalculatorScreen()
-    }
-}
 
 @Composable
 fun IpCalculatorScreen(
@@ -51,57 +40,72 @@ fun IpCalculatorScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { Spacer(Modifier.height(8.dp)) }
+            item { Spacer(Modifier.height(4.dp)) }
 
-            // IP Input Section
+            // IP Input Section Card
             item {
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = SoftDarkBg,
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    tonalElevation = 2.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.Language,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        TextField(
+                        OutlinedTextField(
                             value = uiState.fullInput,
                             onValueChange = { viewModel.updateIp(it) },
-                            placeholder = { Text("IP Address/CIDR", color = TextGray) },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
+                            placeholder = {
+                                Text(
+                                    text = "e.g. 192.168.1.1/24 or 10.0.0.1",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    fontSize = 13.sp
+                                )
+                            },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Done
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            ),
+                            trailingIcon = {
+                                if (uiState.fullInput.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.updateIp("") }) {
+                                        Icon(
+                                            painter = AppIcons.close(),
+                                            contentDescription = "Clear",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                         )
                     }
                 }
             }
 
             uiState.result?.let { result ->
-                // Share & Copy Row (Like Ping Test)
+                // Share & Copy Row
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -109,9 +113,9 @@ fun IpCalculatorScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Network Information",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = Color.White,
+                            text = "Network Information",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                         Row {
@@ -119,12 +123,20 @@ fun IpCalculatorScreen(
                                 viewModel.copyToClipboard()
                                 Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
                             }) {
-                                Icon(AppIcons.contentCopy(), contentDescription = "Copy Results", tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.contentCopy(),
+                                    contentDescription = "Copy Results",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                             IconButton(onClick = {
                                 viewModel.shareResults(context)
                             }) {
-                                Icon(AppIcons.share(), contentDescription = "Share Results", tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.share(),
+                                    contentDescription = "Share Results",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
@@ -132,7 +144,7 @@ fun IpCalculatorScreen(
                 // Chips Row
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IpInfoChip(result.ipClass)
+                        IpInfoChip("Class ${result.ipClass}")
                         IpInfoChip(if (result.isPrivate) "Private" else "Public")
                         IpInfoChip("Usable: ${result.totalHosts}")
                     }
@@ -142,10 +154,15 @@ fun IpCalculatorScreen(
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        color = SoftDarkBg
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        tonalElevation = 2.dp
                     ) {
-                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
                             InfoRow("Network ID", result.networkId)
                             InfoRow("Broadcast", result.broadcast)
                             InfoRow("First Host", result.firstHost)
@@ -160,30 +177,63 @@ fun IpCalculatorScreen(
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        color = SoftDarkBg
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        tonalElevation = 2.dp
                     ) {
-                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Advanced Info", style = MaterialTheme.typography.titleSmall, color = Color.White)
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Advanced Binary & Hex Info",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
+                            )
                             InfoRow("Binary IP", result.binaryIp.chunked(8).joinToString("."))
                             InfoRow("Hexadecimal", result.hexIp)
-                            Spacer(Modifier.height(8.dp))
-                            Text("Network/Host Bits", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Network / Host Bit Division",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             BinaryBar(result.cidr)
-                            Spacer(Modifier.height(8.dp))
-                            Text("Supernet Summary", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Supernet Block Summary",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             val supernetCidr = (result.cidr - 1).coerceAtLeast(0)
                             val supernet = IpCalculator.calculate(result.networkId, supernetCidr)
-                            Text("Parent Block: ${supernet?.networkId}/$supernetCidr", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Parent Block: ${supernet?.networkId}/$supernetCidr",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontFamily = TechMonospace,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
 
                 // VLSM Splitter Section
                 item {
-                    Column {
-                        Text("Subnet Breakdown (VLSM)", style = MaterialTheme.typography.titleSmall, color = Color.White)
-                        Text("Dividing current block into /${result.cidr + 1} subnets", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Subnet Breakdown (VLSM)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Dividing current block into /${result.cidr + 1} subnets",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -191,36 +241,57 @@ fun IpCalculatorScreen(
                 items(subnets) { sub ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = SoftDarkBg.copy(alpha = 0.5f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(14.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(sub.subnet, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                Text(sub.range, style = MaterialTheme.typography.labelSmall, color = TextGray)
+                                Text(
+                                    text = sub.subnet,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontFamily = TechMonospace,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = sub.range,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontFamily = TechMonospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            Text("${sub.usable} hosts", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            Text(
+                                text = "${sub.usable} hosts",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontFamily = TechMonospace,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
-            
+
             item { Spacer(Modifier.height(16.dp)) }
         }
 
         // Bottom Control Panel
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = SoftDarkBg,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            tonalElevation = 8.dp
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+            tonalElevation = 4.dp
         ) {
-            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 // CIDR Slider
                 Column {
                     Row(
@@ -228,15 +299,21 @@ fun IpCalculatorScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Subnet CIDR", style = MaterialTheme.typography.titleSmall, color = Color.White)
+                        Text(
+                            text = "Subnet CIDR Mask",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                             shape = CircleShape
                         ) {
                             Text(
-                                "/${uiState.cidr}",
+                                text = "/${uiState.cidr}",
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                 color = MaterialTheme.colorScheme.primary,
+                                fontFamily = TechMonospace,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -250,25 +327,44 @@ fun IpCalculatorScreen(
                 }
 
                 // Action Buttons
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Button(
-                        onClick = { onNavigateToPing(uiState.ip) },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f), contentColor = MaterialTheme.colorScheme.primary)
+                        onClick = { onNavigateToPing(uiState.ip.ifBlank { "192.168.1.1" }) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
                     ) {
-                        Icon(Icons.Default.NetworkCheck, null)
+                        Icon(
+                            painter = AppIcons.networkCheck(),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("PING")
+                        Text("PING", fontWeight = FontWeight.Bold)
                     }
                     Button(
-                        onClick = { onNavigateToScan(uiState.ip) },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        onClick = { onNavigateToScan(uiState.ip.ifBlank { "192.168.1.1" }) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Icon(Icons.Default.Radar, null)
+                        Icon(
+                            painter = AppIcons.wifi(),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("SCAN")
+                        Text("SCAN", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -279,15 +375,16 @@ fun IpCalculatorScreen(
 @Composable
 fun IpInfoChip(label: String) {
     Surface(
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
+            fontFamily = TechMonospace,
             fontWeight = FontWeight.Bold
         )
     }
@@ -301,20 +398,39 @@ fun InfoRow(label: String, value: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = TextGray)
-            Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontFamily = TechMonospace,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
 
 @Composable
 fun BinaryBar(cidr: Int) {
-    Row(modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape)) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .clip(CircleShape)
+    ) {
         for (i in 0 until 32) {
-            val color = if (i < cidr) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f)
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(color).border(0.5.dp, SoftDarkBg))
+            val color = if (i < cidr) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(color)
+                    .border(0.5.dp, MaterialTheme.colorScheme.surface)
+            )
         }
     }
 }
-
-

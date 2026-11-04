@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.google.android.gms.ads.MobileAds
 import com.herwin.netez.data.wifi.VendorDatabase
 import com.herwin.netez.worker.OUIUpdateWorker
 import com.herwin.netez.workers.UrlHausFeedWorker
@@ -18,7 +19,7 @@ class NeTezApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Initialize SQLCipher libs
+        // Initialize SQLCipher native libraries
         try {
             System.loadLibrary("sqlcipher")
         } catch (e: Exception) {
@@ -28,6 +29,15 @@ class NeTezApplication : Application() {
 
         // Setup BouncyCastle for modern SSH algorithms
         setupBouncyCastle()
+
+        // Initialize AdMob Mobile Ads SDK in background
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                MobileAds.initialize(this@NeTezApplication)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
 
         // Optimization: Load Vendor Database asynchronously to avoid blocking UI thread
         applicationScope.launch(Dispatchers.IO) {

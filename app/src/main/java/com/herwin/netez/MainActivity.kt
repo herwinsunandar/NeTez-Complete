@@ -1,6 +1,7 @@
 package com.herwin.netez
 
 import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,28 +25,33 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        // Schedule Workers
-        SslReminderWorker.schedule(this)
-        LeakCheckWorker.schedule(this)
-        PhishingFeedWorker.schedule(this)
+
+        // Schedule Workers safely
+        try {
+            SslReminderWorker.schedule(this)
+            LeakCheckWorker.schedule(this)
+            PhishingFeedWorker.schedule(this)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         setContent {
             val settingsViewModel: SettingsViewModel = viewModel()
             val themeMode by settingsViewModel.themeMode.collectAsState()
             val language by settingsViewModel.language.collectAsState()
 
-            val darkTheme = when (themeMode) {
-                "light" -> false
-                "dark" -> true
-                else -> isSystemInDarkTheme()
+            val isSystemInDark = isSystemInDarkTheme()
+            val (darkTheme, dynamicColor) = when (themeMode) {
+                "dynamic", "light" -> Pair(isSystemInDark, true)
+                "dark" -> Pair(true, false)
+                else -> Pair(isSystemInDark, false)
             }
 
             LaunchedEffect(language) {
                 LocaleUtils.setAppLocale(language)
             }
 
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val launcher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
                 ) {}
@@ -57,7 +63,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            NeTezTheme(darkTheme = darkTheme) {
+            NeTezTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
                 NeTezApp()
             }
         }

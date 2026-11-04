@@ -1,6 +1,7 @@
 package com.herwin.netez.ui.viewmodels
 
 import android.app.Application
+import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.herwin.netez.data.AppDatabase
@@ -59,6 +60,9 @@ class HttpLabViewModel(application: Application) : AndroidViewModel(application)
     fun updateMethod(method: String) = updateState { it.copy(method = method) }
     fun updateUrl(url: String) = updateState { it.copy(url = url) }
     fun updateBody(body: String) = updateState { it.copy(body = body) }
+    fun updateContentType(contentType: String) = updateState { it.copy(contentType = contentType) }
+    fun updateAuthType(type: String) = updateState { it.copy(authType = type) }
+    fun updateAuthValue(value: String) = updateState { it.copy(authValue = value) }
     fun updateAllowSelfSigned(allow: Boolean) = updateState { it.copy(allowSelfSigned = allow) }
     
     fun addParam() = updateState { it.copy(params = it.params + ("" to "")) }
@@ -90,22 +94,41 @@ class HttpLabViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             try {
+                val rawUrl = state.url.trim()
+                val formattedUrl = if (!rawUrl.startsWith("http://", ignoreCase = true) && !rawUrl.startsWith("https://", ignoreCase = true)) {
+                    "https://$rawUrl"
+                } else {
+                    rawUrl
+                }
+
                 // Construct URL with params
-                val urlBuilder = state.url.toHttpUrlOrNull()?.newBuilder()
-                state.params.forEach { (k, v) -> if (k.isNotBlank()) urlBuilder?.addQueryParameter(k, v) }
-                val finalUrl = urlBuilder?.build()?.toString() ?: state.url
+                val urlBuilder = formattedUrl.toHttpUrlOrNull()?.newBuilder()
+                state.params.forEach { (k, v) ->
+                    if (k.isNotBlank()) urlBuilder?.addQueryParameter(k.trim(), v.trim())
+                }
+                val finalUrl = urlBuilder?.build()?.toString() ?: formattedUrl
 
                 // Construct headers
                 val headerMap = state.headers.filter { it.first.isNotBlank() }.toMap().toMutableMap()
                 when (state.authType) {
-                    "Bearer" -> headerMap["Authorization"] = "Bearer ${state.authValue}"
-                    "Basic" -> {
-                        val encoded = android.util.Base64.encodeToString(state.authValue.toByteArray(), android.util.Base64.NO_WRAP)
+                    "Bearer" -> if (state.authValue.isNotBlank()) {
+                        headerMap["Authorization"] = "Bearer ${state.authValue.trim()}"
+                    }
+                    "Basic" -> if (state.authValue.isNotBlank()) {
+                        val encoded = if (state.authValue.contains(":")) {
+                            Base64.encodeToString(state.authValue.toByteArray(), Base64.NO_WRAP)
+                        } else {
+                            state.authValue.trim()
+                        }
                         headerMap["Authorization"] = "Basic $encoded"
                     }
-                    "API Key" -> {
+                    "API Key" -> if (state.authValue.isNotBlank()) {
                         val parts = state.authValue.split(":", limit = 2)
-                        if (parts.size == 2) headerMap[parts[0]] = parts[1]
+                        if (parts.size == 2) {
+                            headerMap[parts[0].trim()] = parts[1].trim()
+                        } else {
+                            headerMap["X-API-Key"] = parts[0].trim()
+                        }
                     }
                 }
 

@@ -1,5 +1,7 @@
 package com.herwin.netez.ui.viewmodels
 
+import com.herwin.netez.entitlement.FeatureAccessManager
+
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -17,6 +19,7 @@ import androidx.work.WorkManager
 import com.herwin.netez.R
 import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.data.PasswordEntry
+import com.herwin.netez.data.SecurityPreferences
 import com.herwin.netez.data.entities.PasswordStrengthHistory
 import com.herwin.netez.network.HibpManager
 import com.herwin.netez.utils.SecurityUtils
@@ -48,6 +51,7 @@ data class StrengthResult(
 
 class PasswordStrengthViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).passwordStrengthDao()
+    private val securityPrefs = SecurityPreferences(application)
     private val zxcvbn = Zxcvbn()
     private val secureRandom = SecureRandom()
 
@@ -55,6 +59,7 @@ class PasswordStrengthViewModel(application: Application) : AndroidViewModel(app
     var isPasswordVisible by mutableStateOf(false)
     var strengthResult by mutableStateOf<StrengthResult?>(null)
     var isCheckingPwned by mutableStateOf(false)
+    var showGlobalSupportDialog by mutableStateOf(false)
 
     var isGeneratorExpanded by mutableStateOf(false)
     var genLength by mutableFloatStateOf(16f)
@@ -96,6 +101,11 @@ class PasswordStrengthViewModel(application: Application) : AndroidViewModel(app
                     isGeneratorExpanded = true
                     if (generatedPassword.isEmpty()) generateNewPassword()
                 }
+            }
+
+            val accessManager = FeatureAccessManager.getInstance(getApplication())
+            if (accessManager.trackAndCheckGlobalToolUsage()) {
+                showGlobalSupportDialog = true
             }
         }
     }
@@ -231,11 +241,14 @@ class PasswordStrengthViewModel(application: Application) : AndroidViewModel(app
             }
         }
         clipboard.setPrimaryClip(clip)
-        
-        val request = OneTimeWorkRequestBuilder<ClipboardClearWorker>()
-            .setInitialDelay(30, TimeUnit.SECONDS)
-            .build()
-        WorkManager.getInstance(context).enqueue(request)
+
+        val delay = securityPrefs.clipboardClearDelay
+        if (delay > 0) {
+            val request = OneTimeWorkRequestBuilder<ClipboardClearWorker>()
+                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                .build()
+            WorkManager.getInstance(context).enqueue(request)
+        }
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             Toast.makeText(context, context.getString(R.string.notes_action_copy) + "!", Toast.LENGTH_SHORT).show()

@@ -1,28 +1,26 @@
 package com.herwin.netez.ui.screens
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,11 +28,9 @@ import com.herwin.netez.network.DomainInfo
 import com.herwin.netez.network.IpInfo
 import com.herwin.netez.network.WhoisResult
 import com.herwin.netez.ui.AppIcons
-import com.herwin.netez.ui.theme.PremiumNavy
-import com.herwin.netez.ui.theme.SoftDarkBg
-import com.herwin.netez.ui.theme.TextGray
-import com.herwin.netez.ui.viewmodels.WhoisViewModel
 import com.herwin.netez.ui.components.ResultRow
+import com.herwin.netez.ui.theme.TechMonospace
+import com.herwin.netez.ui.viewmodels.WhoisViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,49 +41,88 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // 1. Top Input Section
+        // 1. Top Input Card Section
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = SoftDarkBg,
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-            tonalElevation = 4.dp
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+            tonalElevation = 2.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = uiState.query,
                     onValueChange = { viewModel.updateQuery(it) },
-                    placeholder = { Text("IP or Domain", color = Color(0xFF9CA3AF)) },
+                    placeholder = {
+                        Text(
+                            text = "e.g. 8.8.8.8 or google.com",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontSize = 13.sp
+                        )
+                    },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
-                        focusedBorderColor = Color(0xFF6C8CFF)
+                    enabled = !uiState.isLoading,
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Go
                     ),
-                    singleLine = true
+                    keyboardActions = KeyboardActions(
+                        onGo = { viewModel.fetchInfo() }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    ),
+                    trailingIcon = {
+                        if (uiState.query.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateQuery("") }) {
+                                Icon(
+                                    painter = AppIcons.close(),
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 )
+
                 Button(
                     onClick = { viewModel.fetchInfo() },
                     enabled = !uiState.isLoading,
-                    modifier = Modifier.height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))
+                    modifier = Modifier.height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     if (uiState.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
                     } else {
-                        Text("FETCH", fontWeight = FontWeight.ExtraBold)
+                        Icon(
+                            painter = AppIcons.search(),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "LOOKUP",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }
@@ -96,8 +131,8 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
         // 2. Result Content
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (uiState.result != null && uiState.result !is WhoisResult.Error) {
                 item {
@@ -107,9 +142,9 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Whois & IP Information",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = Color.White,
+                            text = "Whois & IP Information",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                         Row {
@@ -117,12 +152,20 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
                                 viewModel.copyResultsToClipboard()
                                 Toast.makeText(context, "Results copied to clipboard", Toast.LENGTH_SHORT).show()
                             }) {
-                                Icon(AppIcons.contentCopy(), contentDescription = "Copy Results", tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.contentCopy(),
+                                    contentDescription = "Copy Results",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                             IconButton(onClick = {
                                 viewModel.shareResults(context)
                             }) {
-                                Icon(AppIcons.share(), contentDescription = "Share Results", tint = Color(0xFF6C8CFF))
+                                Icon(
+                                    painter = AppIcons.share(),
+                                    contentDescription = "Share Results",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
@@ -140,22 +183,41 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
                     item {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFFEF4444).copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(16.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.3f))
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
                         ) {
-                            Text(res.message, color = Color(0xFFEF4444), modifier = Modifier.padding(16.dp), fontSize = 14.sp)
+                            Text(
+                                text = res.message,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(14.dp),
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
                 null -> {
                     if (!uiState.isLoading) {
                         item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(top = 100.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 80.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.Search, null, tint = TextGray.copy(alpha = 0.2f), modifier = Modifier.size(80.dp))
-                                    Spacer(Modifier.height(16.dp))
-                                    Text("Enter an IP or Domain to lookup", color = TextGray)
+                                    Icon(
+                                        painter = AppIcons.search(),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        text = "Enter an IP or Domain above to lookup",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 14.sp
+                                    )
                                 }
                             }
                         }
@@ -169,50 +231,84 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
 @Composable
 fun IpResultLayout(info: IpInfo) {
     val context = LocalContext.current
-    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Location Card
-        Surface(shape = RoundedCornerShape(20.dp), color = SoftDarkBg) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                WhoisSectionHeader("LOCATION", Icons.Default.LocationOn)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+            tonalElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                WhoisSectionHeader("LOCATION", AppIcons.public())
                 ResultRow("Country", "${info.country} ${getFlagEmoji(info.countryCode)}", showCopyIcon = false)
                 ResultRow("Region / City", "${info.regionName}, ${info.city}", showCopyIcon = false)
-                ResultRow("Zip Code", info.zip, showCopyIcon = false)
+                ResultRow("Zip Code", info.zip, showCopyIcon = false, isTechnicalData = true)
                 ResultRow("Timezone", info.timezone, showCopyIcon = false)
-                ResultRow("Coordinates", "${info.lat}, ${info.lon}", showCopyIcon = false)
-                
+                ResultRow("Coordinates", "${info.lat}, ${info.lon}", showCopyIcon = false, isTechnicalData = true)
+
                 Button(
                     onClick = {
                         val gmmIntentUri = Uri.parse("geo:${info.lat},${info.lon}?q=${info.lat},${info.lon}")
                         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                         context.startActivity(mapIntent)
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF6C8CFF).copy(alpha = 0.15f),
-                        contentColor = Color(0xFF6C8CFF)
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Icon(Icons.Default.Map, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("OPEN MAPS", fontWeight = FontWeight.Bold)
+                    Icon(painter = AppIcons.map(), contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("OPEN IN MAPS", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
 
         // Network Card
-        Surface(shape = RoundedCornerShape(20.dp), color = SoftDarkBg) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                WhoisSectionHeader("NETWORK", Icons.Default.Dns)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+            tonalElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                WhoisSectionHeader("NETWORK", AppIcons.dns())
                 ResultRow("ISP", info.isp, showCopyIcon = false)
                 ResultRow("Organization", info.org, showCopyIcon = false)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("ASN", style = MaterialTheme.typography.labelSmall, color = TextGray)
-                    Surface(color = Color(0xFF6C8CFF).copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
-                        Text(info.asn, color = Color(0xFF6C8CFF), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("ASN", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = info.asn,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontFamily = TechMonospace,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
                     }
                 }
-                ResultRow("Reverse DNS", info.reverse, showCopyIcon = false)
+                ResultRow("Reverse DNS", info.reverse, showCopyIcon = false, isTechnicalData = true)
             }
         }
 
@@ -220,38 +316,74 @@ fun IpResultLayout(info: IpInfo) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             WhoisStatusChip("Mobile", info.mobile)
             WhoisStatusChip("Proxy", info.proxy)
-            WhoisStatusChip("Hosting", info.hosting, positiveColor = Color(0xFF10B981))
+            WhoisStatusChip("Hosting", info.hosting, positiveColor = MaterialTheme.colorScheme.secondary)
         }
     }
 }
 
 @Composable
 fun DomainResultLayout(info: DomainInfo) {
-    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Surface(shape = RoundedCornerShape(20.dp), color = SoftDarkBg) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(info.domain.uppercase(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = Color.White)
-                    Surface(color = Color(0xFF10B981).copy(alpha = 0.1f), shape = CircleShape) {
-                        Text("ACTIVE", color = Color(0xFF10B981), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = info.domain.uppercase(),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontFamily = TechMonospace,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = "ACTIVE",
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
                 }
-                
-                HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+            }
 
-                WhoisSectionHeader("REGISTRATION", Icons.Default.Description)
-                ResultRow("Registrar", info.registrar, showCopyIcon = false)
-                ResultRow("Handle", info.handle, showCopyIcon = false)
-                ResultRow("Created", info.creationDate.substringBefore("T"), showCopyIcon = false)
-                ResultRow("Expires", info.expirationDate.substringBefore("T"), showCopyIcon = false)
-                
-                WhoisSectionHeader("NAMESERVERS", Icons.Default.Dns)
-                info.nameservers.forEach { ns ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.SubdirectoryArrowRight, null, tint = TextGray, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(ns, color = Color.White, fontSize = 14.sp)
-                    }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+            WhoisSectionHeader("REGISTRATION", AppIcons.description())
+            ResultRow("Registrar", info.registrar, showCopyIcon = false)
+            ResultRow("Handle", info.handle, showCopyIcon = false, isTechnicalData = true)
+            ResultRow("Created", info.creationDate.substringBefore("T"), showCopyIcon = false, isTechnicalData = true)
+            ResultRow("Expires", info.expirationDate.substringBefore("T"), showCopyIcon = false, isTechnicalData = true)
+
+            WhoisSectionHeader("NAMESERVERS", AppIcons.dns())
+            info.nameservers.forEach { ns ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = AppIcons.dns(),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = ns,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = TechMonospace,
+                        fontSize = 13.sp
+                    )
                 }
             }
         }
@@ -259,24 +391,35 @@ fun DomainResultLayout(info: DomainInfo) {
 }
 
 @Composable
-fun WhoisSectionHeader(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+fun WhoisSectionHeader(title: String, icon: Painter) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.labelSmall, color = Color(0xFF6C8CFF), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Icon(
+            painter = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(14.dp)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
     }
 }
 
 @Composable
-fun WhoisStatusChip(label: String, active: Boolean, positiveColor: Color = Color(0xFF6C8CFF)) {
+fun WhoisStatusChip(label: String, active: Boolean, positiveColor: Color = MaterialTheme.colorScheme.primary) {
     Surface(
-        color = if (active) positiveColor.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.05f),
+        color = if (active) positiveColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         shape = RoundedCornerShape(8.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (active) positiveColor.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, if (active) positiveColor.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
         Text(
             text = "$label: ${if (active) "Yes" else "No"}",
-            color = if (active) positiveColor else TextGray,
+            color = if (active) positiveColor else MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)

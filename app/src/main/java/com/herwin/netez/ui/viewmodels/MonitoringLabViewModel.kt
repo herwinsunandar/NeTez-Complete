@@ -3,9 +3,15 @@ package com.herwin.netez.ui.viewmodels
 import android.app.Application
 import android.content.Intent
 import android.os.Build
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.herwin.netez.data.*
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureAccessState
+import com.herwin.netez.entitlement.FeatureId
 import com.herwin.netez.service.MonitoringService
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +21,9 @@ import kotlinx.coroutines.launch
 class MonitoringLabViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
     private val dao = database.monitoringDao()
+
+    var actionMessage by mutableStateOf<String?>(null)
+    var showPaywallDialog by mutableStateOf(false)
 
     val targets: StateFlow<List<MonitoringTarget>> = dao.getAllTargets()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -28,6 +37,16 @@ class MonitoringLabViewModel(application: Application) : AndroidViewModel(applic
         keyword: String? = null,
         intervalMinutes: Int = 1
     ) {
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        val currentCount = targets.value.size
+        val accessState = accessManager.checkAccess(FeatureId.MONITORING_TARGETS_MAX, currentCount)
+        if (accessState == FeatureAccessState.LIMIT_REACHED) {
+            showPaywallDialog = true
+            return
+        }
+
+        val clampedInterval = if (accessManager.isPro()) intervalMinutes.coerceAtLeast(1) else intervalMinutes.coerceAtLeast(5)
+
         viewModelScope.launch {
             val target = MonitoringTarget(
                 type = type,
@@ -36,7 +55,7 @@ class MonitoringLabViewModel(application: Application) : AndroidViewModel(applic
                 url = url,
                 dnsServer = dnsServer,
                 keyword = keyword,
-                intervalMillis = intervalMinutes * 60000L
+                intervalMillis = clampedInterval * 60000L
             )
             dao.insertTarget(target)
             startServiceIfNeeded()

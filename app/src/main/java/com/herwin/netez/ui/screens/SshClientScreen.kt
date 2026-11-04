@@ -1,5 +1,10 @@
 package com.herwin.netez.ui.screens
 
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureAccessState
+import com.herwin.netez.entitlement.FeatureId
+import com.herwin.netez.ui.components.ContextualPaywallDialog
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,14 +61,25 @@ fun SshClientScreen(
     viewModel: SshViewModel = viewModel(),
     initialIp: String = ""
 ) {
+    val context = LocalContext.current
     val isConnected by viewModel.isConnected.collectAsState()
     val savedHosts by viewModel.savedHosts.collectAsState()
     val terminalOutput by viewModel.terminalOutput.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
-    
+
     var showAddDialog by remember { mutableStateOf(initialIp.isNotEmpty()) }
     var hostToEdit by remember { mutableStateOf<SshHost?>(null) }
     var connectingHostId by remember { mutableLongStateOf(-1L) }
+    var showPaywallDialog by remember { mutableStateOf(false) }
+
+    if (showPaywallDialog) {
+        ContextualPaywallDialog(
+            featureId = FeatureId.SAVED_SSH_SERVERS_MAX,
+            limitText = "Free plan supports up to 3 saved SSH/SFTP servers. Upgrade to NeTez PRO for unlimited saved server profiles.",
+            onDismiss = { showPaywallDialog = false },
+            onUpgradeClick = {}
+        )
+    }
 
     LaunchedEffect(connectionState) {
         if (connectionState == "Connected" || connectionState.startsWith("Error")) {
@@ -83,7 +99,15 @@ fun SshClientScreen(
                     },
                     onEdit = { hostToEdit = it },
                     onDelete = { viewModel.deleteHost(it) },
-                    onAddClick = { showAddDialog = true }
+                    onAddClick = {
+                        val accessManager = FeatureAccessManager.getInstance(context)
+                        val state = accessManager.checkAccess(FeatureId.SAVED_SSH_SERVERS_MAX, savedHosts.size)
+                        if (state == FeatureAccessState.LIMIT_REACHED) {
+                            showPaywallDialog = true
+                        } else {
+                            showAddDialog = true
+                        }
+                    }
                 )
                 
                 if (showAddDialog || hostToEdit != null) {
@@ -94,9 +118,18 @@ fun SshClientScreen(
                             showAddDialog = false
                             hostToEdit = null
                         },
-                        onSave = { 
-                            if (hostToEdit != null) viewModel.updateHost(it)
-                            else viewModel.saveHost(it)
+                        onSave = { host ->
+                            if (hostToEdit != null) {
+                                viewModel.updateHost(host)
+                            } else {
+                                val accessManager = FeatureAccessManager.getInstance(context)
+                                val state = accessManager.checkAccess(FeatureId.SAVED_SSH_SERVERS_MAX, savedHosts.size)
+                                if (state == FeatureAccessState.LIMIT_REACHED) {
+                                    showPaywallDialog = true
+                                } else {
+                                    viewModel.saveHost(host)
+                                }
+                            }
                             showAddDialog = false
                             hostToEdit = null
                         }

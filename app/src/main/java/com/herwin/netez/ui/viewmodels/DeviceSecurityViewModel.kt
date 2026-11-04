@@ -1,15 +1,26 @@
 package com.herwin.netez.ui.viewmodels
 
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.herwin.netez.device.DeviceSecurityAuditEngine
 import com.herwin.netez.device.DeviceSecurityAuditResult
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.utils.DeviceSecurityPdfReportGenerator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class DeviceSecurityUiState(
     val auditResult: DeviceSecurityAuditResult? = null,
@@ -22,6 +33,8 @@ class DeviceSecurityViewModel(application: Application) : AndroidViewModel(appli
     private val _uiState = MutableStateFlow(DeviceSecurityUiState())
     val uiState: StateFlow<DeviceSecurityUiState> = _uiState.asStateFlow()
 
+    var actionMessage by mutableStateOf<String?>(null)
+
     fun startScan() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isScanning = true, error = null)
@@ -32,6 +45,48 @@ class DeviceSecurityViewModel(application: Application) : AndroidViewModel(appli
                 _uiState.value = _uiState.value.copy(isScanning = false, error = e.message)
             }
         }
+    }
+
+    fun exportPdfReport(context: Context, uri: Uri) {
+        val accessManager = FeatureAccessManager.getInstance(context)
+        if (!accessManager.isPro()) {
+            actionMessage = "Professional PDF Report export is available in NeTez PRO"
+            return
+        }
+        val result = _uiState.value.auditResult ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { os ->
+                    DeviceSecurityPdfReportGenerator.generatePdfReport(context, result, os)
+                }
+                withContext(Dispatchers.Main) {
+                    actionMessage = "PDF Report saved successfully"
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    actionMessage = "Failed to export PDF: ${e.localizedMessage ?: "File error"}"
+                }
+            }
+        }
+    }
+
+    fun copyReportToClipboard(context: Context) {
+        val result = _uiState.value.auditResult ?: return
+        val report = StringBuilder("NeTez Device Security Audit Report\n\n")
+        report.append("Device: ${result.manufacturer} ${result.model}\n")
+        report.append("Android: ${result.androidVersion} (SDK ${result.sdkVersion})\n")
+        report.append("Security Patch: ${result.securityPatch ?: "Unknown"}\n\n")
+        report.append("Security Score: ${result.securityScore}/100 (${result.grade})\n\n")
+        report.append("Safe: ${result.safeCount} | Warnings: ${result.warningCount} | Critical: ${result.criticalCount}\n\n")
+        report.append("Checks Summary:\n")
+        result.checks.forEach {
+            report.append("• ${it.name}: ${it.status} (${it.detail})\n")
+        }
+        
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Device Security Report", report.toString())
+        clipboard.setPrimaryClip(clip)
+        actionMessage = "Report copied to clipboard"
     }
 
     fun shareReport() {

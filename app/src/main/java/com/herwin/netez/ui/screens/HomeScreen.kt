@@ -15,7 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -26,32 +25,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.herwin.netez.R
-import com.herwin.netez.engine.DotStatus
-import com.herwin.netez.engine.SecurityPostureEngine
-import com.herwin.netez.ui.AppIcons
-import com.herwin.netez.ui.components.CircularScoreView
-import com.herwin.netez.ui.theme.*
-import com.herwin.netez.ui.viewmodels.DashboardState
-import com.herwin.netez.ui.viewmodels.DashboardViewModel
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.herwin.netez.R
+import com.herwin.netez.engine.DotStatus
+import com.herwin.netez.engine.SecurityPostureResult
+import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.CircularScoreView
+import com.herwin.netez.ui.theme.TechMonospace
+import com.herwin.netez.ui.viewmodels.DashboardState
+import com.herwin.netez.ui.viewmodels.DashboardViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -67,11 +63,14 @@ fun HomeScreen(
     onNavigateToPasswordManager: () -> Unit,
     onNavigateToSslReminder: () -> Unit = {},
     onNavigateToSecurity: () -> Unit = {},
-    onNavigateToSecurityPostureDetail: () -> Unit = {}
+    onNavigateToSecurityPostureDetail: () -> Unit = {},
+    onNavigateToSecurityIntelligence: () -> Unit = {},
+    onNavigateToEngTools: () -> Unit = {},
+    onNavigateToSecurityToolsList: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -94,7 +93,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        while(true) {
+        while (true) {
             viewModel.refresh()
             delay(5000)
         }
@@ -103,12 +102,15 @@ fun HomeScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy),
-        contentPadding = PaddingValues(16.dp),
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // 1. Network/Security Summary Hero Card
         item {
             SecurityPostureHeroCard(
+                postureResult = uiState.securityPostureResult,
+                onRefreshPosture = { viewModel.refreshSecurityPosture() },
                 onHeroClick = onNavigateToSecurityPostureDetail,
                 onWifiIconClick = {
                     if (uiState.connectionType == "WiFi" && uiState.bssid.isNotEmpty()) {
@@ -120,41 +122,19 @@ fun HomeScreen(
             )
         }
 
+        // 2. GPS Warning Card (if GPS is disabled)
         if (!isGpsEnabled(context)) {
             item {
                 GpsWarningCard(context)
             }
         }
 
-        if (uiState.expiringSslCount > 0) {
-            item {
-                SecurityAlertBanner(
-                    text = stringResource(R.string.ssl_banner_expiring, uiState.expiringSslCount),
-                    onClick = onNavigateToSslReminder
-                )
-            }
-        }
-
+        // 3. Strength & Link Speed Metric Cards
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable { onNavigateToPasswordManager() },
-                shape = RoundedCornerShape(24.dp),
-                color = Color(0xFF6C8CFF).copy(alpha = 0.1f),
-                border = BorderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.3f))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(AppIcons.lock(), null, tint = Color(0xFF6C8CFF))
-                    Spacer(Modifier.width(12.dp))
-                    Text(stringResource(R.string.dash_pass_prompt), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-        }
-
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SignalCard(
                     modifier = Modifier.weight(1f),
                     label = "Strength",
@@ -167,15 +147,31 @@ fun HomeScreen(
                     label = if (uiState.connectionType == "WiFi") "Link Speed" else "Net Type",
                     value = uiState.linkSpeed,
                     painter = if (uiState.connectionType == "WiFi") AppIcons.speed() else AppIcons.networkCheck(),
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
 
+        // 4. Current Network Usage Card
         item {
             NetworkUsageCard(uiState)
         }
 
+        // 5 & 6. SSL Expiry Alert & Password Manager Group
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (uiState.expiringSslCount > 0) {
+                    SslExpiryAlertCard(
+                        count = uiState.expiringSslCount,
+                        onClick = onNavigateToSslReminder
+                    )
+                }
+
+                PasswordManagerCard(onClick = onNavigateToPasswordManager)
+            }
+        }
+
+        // 7. Monitoring Dashboard Card
         item {
             MonitoringDashboardCard(
                 activeCount = uiState.activeMonitors,
@@ -183,26 +179,33 @@ fun HomeScreen(
             )
         }
 
+        // 8. Quick Actions Grid
         item {
             QuickActionsGrid(
-                onNavigateToPing,
-                onNavigateToSpeed,
-                onNavigateToWhois,
-                onNavigateToIpCalc
+                onNavigateToSecurityIntelligence = onNavigateToSecurityIntelligence,
+                onNavigateToSslReminder = onNavigateToSslReminder,
+                onNavigateToEngTools = onNavigateToEngTools,
+                onNavigateToSecurityToolsList = onNavigateToSecurityToolsList,
+                onNavigateToSpeed = onNavigateToSpeed,
+                onNavigateToWhois = onNavigateToWhois
             )
         }
-        
-        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 
 @Composable
 fun SecurityPostureHeroCard(
+    postureResult: SecurityPostureResult?,
+    onRefreshPosture: () -> Unit,
     onHeroClick: () -> Unit,
     onWifiIconClick: () -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-    
+    LaunchedEffect(Unit) {
+        if (postureResult == null) {
+            onRefreshPosture()
+        }
+    }
+
     AndroidView<View>(
         factory = { ctx ->
             LayoutInflater.from(ctx).inflate(R.layout.dashboard_hero_merged, null, false).apply {
@@ -212,15 +215,14 @@ fun SecurityPostureHeroCard(
         },
         modifier = Modifier.fillMaxWidth(),
         update = { view ->
-            scope.launch {
-                val result = SecurityPostureEngine.calculate(view.context)
-                val net = result.netInfo
-                
+            if (postureResult != null) {
+                val net = postureResult.netInfo
+
                 view.findViewById<TextView>(R.id.tv_ssid).text = net.ssidOrOperator
                 view.findViewById<TextView>(R.id.tv_subtitle).text = if (net.isWifi) "WiFi Network" else "Cellular Network • ${net.networkType}"
                 view.findViewById<TextView>(R.id.tv_local_ip_value).text = net.localIp
                 view.findViewById<TextView>(R.id.tv_public_ip_value).text = net.publicIp
-                
+
                 val gatewayValue = view.findViewById<TextView>(R.id.tv_gateway_value)
                 val gatewayLabel = view.findViewById<TextView>(R.id.tv_gateway_label)
                 if (net.isWifi) {
@@ -230,62 +232,95 @@ fun SecurityPostureHeroCard(
                     gatewayLabel.text = "TYPE"
                     gatewayValue.text = net.networkType
                 }
-                
+
                 view.findViewById<TextView>(R.id.tv_isp_value).text = net.isp
-                
+
                 val wifiIcon = view.findViewById<ImageView>(R.id.iv_wifi)
                 wifiIcon.setImageResource(if (net.isWifi) R.drawable.ic_wifi else R.drawable.ic_signal_cellular)
-                
-                view.findViewById<CircularScoreView>(R.id.score_circle).setScore(result.overallScore, result.overallStatus)
-                
+
+                view.findViewById<CircularScoreView>(R.id.score_circle).setScore(postureResult.overallScore, postureResult.overallStatus)
+
                 val chips = view.findViewById<ChipGroup>(R.id.category_chips)
                 chips.removeAllViews()
-                result.categories.forEach { category ->
-                    val chip = Chip(view.context)
-                    val dot = when (category.status) {
-                        DotStatus.SAFE -> "🟢"
-                        DotStatus.WARNING -> "🟡"
-                        DotStatus.CRITICAL -> "🔴"
+                postureResult.categories.forEach { category ->
+                    val chip = Chip(view.context).apply {
+                        val dot = when (category.status) {
+                            DotStatus.SAFE -> "🟢"
+                            DotStatus.WARNING -> "🟡"
+                            DotStatus.CRITICAL -> "🔴"
+                        }
+                        text = "$dot ${category.name.split(" ")[0]} ${category.score}"
+                        setTextColor(ColorStateList.valueOf(android.graphics.Color.WHITE))
+                        chipBackgroundColor = ColorStateList.valueOf(android.graphics.Color.parseColor("#33000000"))
+                        chipStrokeColor = ColorStateList.valueOf(android.graphics.Color.parseColor("#4DFFFFFF"))
+                        chipStrokeWidth = 1f * view.resources.displayMetrics.density
+                        textSize = 11f
+                        chipCornerRadius = 12f * view.resources.displayMetrics.density
+                        setEnsureMinTouchTargetSize(false)
                     }
-                    chip.text = "$dot ${category.name.split(" ")[0]} ${category.score}"
-                    chip.chipBackgroundColor = ColorStateList.valueOf(android.graphics.Color.parseColor("#26FFFFFF"))
-                    chip.setTextColor(android.graphics.Color.WHITE)
-                    chip.textSize = 11f
-                    chip.chipCornerRadius = 8f * view.resources.displayMetrics.density
-                    chip.setEnsureMinTouchTargetSize(false)
                     chips.addView(chip)
                 }
-                
-                val issueSummary = result.issues.joinToString(" • ") { it.title }
-                view.findViewById<TextView>(R.id.tv_issues).text = view.context.getString(R.string.security_issues, result.issues.size, issueSummary)
+
+                val issueCount = postureResult.issues.size
+                val issueSummary = when (issueCount) {
+                    0 -> "System is secure"
+                    1 -> "1 security issue detected"
+                    else -> "$issueCount security issues detected"
+                }
+                view.findViewById<TextView>(R.id.tv_issues).text = issueSummary
             }
         }
     )
 }
 
 @Composable
-fun SecurityAlertBanner(text: String, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFEF4444).copy(alpha = 0.1f)),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
+fun SslExpiryAlertCard(
+    count: Int,
+    onClick: () -> Unit
+) {
+    if (count <= 0) return
+
+    val titleText = if (count == 1) "1 SSL Certificate Expiring" else "$count SSL Certificates Expiring"
+    val subtitleText = "Review certificates that require attention"
+    val alertColor = MaterialTheme.colorScheme.error
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = alertColor.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, alertColor.copy(alpha = 0.4f)),
+        tonalElevation = 2.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = text,
-                color = Color(0xFFEF4444),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
+            Icon(
+                painter = AppIcons.warning(),
+                contentDescription = null,
+                tint = alertColor,
+                modifier = Modifier.size(22.dp)
             )
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = titleText,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = alertColor
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitleText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Icon(
                 painter = AppIcons.chevronRight(),
                 contentDescription = null,
-                tint = Color(0xFFEF4444),
+                tint = alertColor,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -293,39 +328,99 @@ fun SecurityAlertBanner(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun WifiInfoItem(label: String, value: String) {
-    Column {
-        Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = Color(0xFFC7D2FE)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+fun PasswordManagerCard(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = AppIcons.lock(),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.security_pass_manager_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.security_pass_manager_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                painter = AppIcons.chevronRight(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
 @Composable
-fun SignalCard(modifier: Modifier, label: String, value: String, painter: Painter, color: Color) {
+fun SignalCard(
+    modifier: Modifier,
+    label: String,
+    value: String,
+    painter: Painter,
+    color: Color
+) {
     Surface(
-        modifier = modifier.height(110.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = SoftDarkBg,
+        modifier = modifier.height(100.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
         tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text(label, style = MaterialTheme.typography.labelSmall, color = TextGray)
-                Icon(painter, null, tint = TextGray.copy(alpha = 0.3f), modifier = Modifier.size(16.dp))
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Icon(
+                    painter = painter,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
+                )
             }
             Spacer(Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = color)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontFamily = TechMonospace,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
         }
     }
 }
@@ -334,33 +429,52 @@ fun SignalCard(modifier: Modifier, label: String, value: String, painter: Painte
 fun NetworkUsageCard(state: DashboardState) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = SoftDarkBg,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
         tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("CURRENT NETWORK USAGE", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White, letterSpacing = 1.sp)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Current Network Usage",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Text(
                     text = "Today: ↓ ${formatBytes(state.todayDownBytes)} ↑ ${formatBytes(state.todayUpBytes)}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextGray,
-                    fontSize = 9.sp
+                    fontFamily = TechMonospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp
                 )
             }
-            
-            Spacer(Modifier.height(16.dp))
-            
-            Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
+
+            Spacer(Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(95.dp)
+            ) {
                 UsageGraph(state.downloadHistory, state.uploadHistory)
             }
-            
+
             Spacer(Modifier.height(12.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                LegendItem(Color(0xFF6C8CFF), "Download ${formatRate(state.currentDownRate)}")
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LegendItem(MaterialTheme.colorScheme.primary, "Download ${formatRate(state.currentDownRate)}")
                 Spacer(Modifier.width(16.dp))
-                LegendItem(Color(0xFFFF8C42), "Upload ${formatRate(state.currentUpRate)}")
+                LegendItem(MaterialTheme.colorScheme.tertiary, "Upload ${formatRate(state.currentUpRate)}")
             }
         }
     }
@@ -368,26 +482,25 @@ fun NetworkUsageCard(state: DashboardState) {
 
 @Composable
 fun UsageGraph(downHistory: List<Float>, upHistory: List<Float>) {
-    val downColor = Color(0xFF6C8CFF)
-    val upColor = Color(0xFFFF8C42)
-    
+    val downColor = MaterialTheme.colorScheme.primary
+    val upColor = MaterialTheme.colorScheme.tertiary
+    val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
-        
+
         val maxVal = (downHistory.maxOrNull() ?: 1024f).coerceAtLeast(upHistory.maxOrNull() ?: 1024f).coerceAtLeast(1024f)
-        
-        // Draw grid lines
+
         for (i in 1..3) {
             val y = height * (i / 4f)
-            drawLine(Color.White.copy(alpha = 0.05f), start = Offset(0f, y), end = Offset(width, y))
+            drawLine(gridColor, start = Offset(0f, y), end = Offset(width, y))
         }
 
         if (downHistory.size < 2) return@Canvas
-        
+
         val stepX = width / (downHistory.size - 1)
-        
-        // Path for Down
+
         val downPath = Path()
         downHistory.forEachIndexed { index, value ->
             val x = index * stepX
@@ -395,8 +508,7 @@ fun UsageGraph(downHistory: List<Float>, upHistory: List<Float>) {
             if (index == 0) downPath.moveTo(x, y) else downPath.lineTo(x, y)
         }
         drawPath(downPath, downColor, style = Stroke(2.dp.toPx()))
-        
-        // Path for Up
+
         val upPath = Path()
         upHistory.forEachIndexed { index, value ->
             val x = index * stepX
@@ -410,38 +522,105 @@ fun UsageGraph(downHistory: List<Float>, upHistory: List<Float>) {
 @Composable
 fun LegendItem(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
         Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Medium)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = TechMonospace,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
 @Composable
 fun QuickActionsGrid(
-    onNavigateToPing: () -> Unit,
+    onNavigateToSecurityIntelligence: () -> Unit,
+    onNavigateToSslReminder: () -> Unit,
+    onNavigateToEngTools: () -> Unit,
+    onNavigateToSecurityToolsList: () -> Unit,
     onNavigateToSpeed: () -> Unit,
-    onNavigateToWhois: () -> Unit,
-    onNavigateToIpCalc: () -> Unit
+    onNavigateToWhois: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-            QuickActionNocButton(Modifier.weight(1f), stringResource(R.string.action_quick_ping), AppIcons.networkCheck(), onNavigateToPing)
-            QuickActionNocButton(Modifier.weight(1f), stringResource(R.string.action_speedtest), AppIcons.speed(), onNavigateToSpeed)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Row 1: Security Intel & SSL/TLS Monitor
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            QuickActionNocButton(
+                modifier = Modifier.weight(1f),
+                label = "Security Intel",
+                painter = AppIcons.shieldCheck(),
+                onClick = onNavigateToSecurityIntelligence
+            )
+            QuickActionNocButton(
+                modifier = Modifier.weight(1f),
+                label = "SSL/TLS Monitor",
+                painter = AppIcons.lock(),
+                onClick = onNavigateToSslReminder
+            )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-            QuickActionNocButton(Modifier.weight(1f), stringResource(R.string.action_whois), AppIcons.info(), onNavigateToWhois)
-            QuickActionNocButton(Modifier.weight(1f), stringResource(R.string.action_ip_info), AppIcons.calculate(), onNavigateToIpCalc)
+
+        // Row 2: Engineer Tools & Security Tools
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            QuickActionNocButton(
+                modifier = Modifier.weight(1f),
+                label = "Engineer Tools",
+                painter = AppIcons.terminal(),
+                onClick = onNavigateToEngTools
+            )
+            QuickActionNocButton(
+                modifier = Modifier.weight(1f),
+                label = "Security Tools",
+                painter = AppIcons.build(),
+                onClick = onNavigateToSecurityToolsList
+            )
+        }
+
+        // Row 3: Speed Test & WHOIS
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            QuickActionNocButton(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.action_speedtest),
+                painter = AppIcons.speed(),
+                onClick = onNavigateToSpeed
+            )
+            QuickActionNocButton(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.action_whois),
+                painter = AppIcons.info(),
+                onClick = onNavigateToWhois
+            )
         }
     }
 }
 
 @Composable
-fun QuickActionNocButton(modifier: Modifier, label: String, painter: Painter, onClick: () -> Unit) {
+fun QuickActionNocButton(
+    modifier: Modifier,
+    label: String,
+    painter: Painter,
+    onClick: () -> Unit
+) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(100.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = SoftDarkBg,
+        modifier = modifier.height(90.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
         tonalElevation = 2.dp
     ) {
         Column(
@@ -449,43 +628,133 @@ fun QuickActionNocButton(modifier: Modifier, label: String, painter: Painter, on
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(painter, contentDescription = null, tint = Color(0xFF6366F1), modifier = Modifier.size(32.dp))
-            Spacer(Modifier.height(8.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color.White, letterSpacing = 1.sp)
+            Icon(
+                painter = painter,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(26.dp)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
 
 @Composable
-fun MonitoringDashboardCard(activeCount: Int, onClick: () -> Unit) {
+fun MonitoringDashboardCard(
+    activeCount: Int,
+    onClick: () -> Unit
+) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = SoftDarkBg,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
         tonalElevation = 2.dp
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(AppIcons.monitor(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("MONITORING LAB", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White, letterSpacing = 1.sp)
-                Text("$activeCount active monitors", style = MaterialTheme.typography.bodySmall, color = TextGray)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = AppIcons.monitor(),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
-            Icon(AppIcons.chevronRight(), null, tint = TextGray)
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Monitoring Lab",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "$activeCount active monitors",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                painter = AppIcons.chevronRight(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
 
+@Composable
+fun GpsWarningCard(context: Context) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = AppIcons.locationOff(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "GPS Required",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = "Enable GPS to detect WiFi SSID.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+            TextButton(onClick = {
+                try {
+                    context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                } catch (e: Exception) {
+                }
+            }) {
+                Text(
+                    text = "FIX NOW",
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun getSignalColor(strength: String): Color {
     val dbm = strength.split(" ")[0].toIntOrNull() ?: -100
     return when {
-        dbm > -60 -> SignalExcellent
-        dbm >= -80 -> SignalGood
-        else -> SignalPoor
+        dbm > -60 -> MaterialTheme.colorScheme.secondary
+        dbm >= -80 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.error
     }
 }
 
@@ -512,34 +781,5 @@ private fun isGpsEnabled(context: Context): Boolean {
         locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
     } catch (e: Exception) {
         false
-    }
-}
-
-@Composable
-fun GpsWarningCard(context: Context) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(AppIcons.locationOff(), contentDescription = null, tint = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("GPS Required", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("Enable GPS to detect WiFi SSID.", style = MaterialTheme.typography.bodySmall, color = TextGray)
-            }
-            TextButton(onClick = {
-                try {
-                    context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                } catch (e: Exception) {}
-            }) {
-                Text("FIX NOW", color = MaterialTheme.colorScheme.error)
-            }
-        }
     }
 }

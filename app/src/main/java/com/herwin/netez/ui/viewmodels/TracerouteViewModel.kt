@@ -18,7 +18,7 @@ import java.util.Date
 import java.util.Locale
 
 data class TracerouteState(
-    val host: String = "8.8.8.8",
+    val host: String = "",
     val hops: List<Hop> = emptyList(),
     val isRunning: Boolean = false
 )
@@ -42,9 +42,14 @@ class TracerouteViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private fun startTrace() {
-        _uiState.value = _uiState.value.copy(isRunning = true, hops = emptyList())
+        val targetHost = _uiState.value.host.trim().ifBlank { "google.com" }
+        _uiState.value = _uiState.value.copy(
+            isRunning = true,
+            hops = emptyList(),
+            host = _uiState.value.host.ifBlank { targetHost }
+        )
         traceJob = viewModelScope.launch {
-            TracerouteManager.trace(_uiState.value.host).collect { hop ->
+            TracerouteManager.trace(targetHost).collect { hop ->
                 _uiState.value = _uiState.value.copy(
                     hops = _uiState.value.hops + hop
                 )
@@ -65,7 +70,7 @@ class TracerouteViewModel(application: Application) : AndroidViewModel(applicati
         sb.append("📅 Date: ${sdf.format(Date())}\n")
         sb.append("─────────────────────\n")
         sb.append("🎯 Target: ${state.host}\n\n")
-        
+
         if (state.hops.isNotEmpty()) {
             sb.append("📍 Route Hops:\n")
             state.hops.forEach { hop ->
@@ -75,7 +80,7 @@ class TracerouteViewModel(application: Application) : AndroidViewModel(applicati
         } else {
             sb.append("No results available.\n")
         }
-        
+
         sb.append("─────────────────────\n")
         sb.append("Sent from NeTez Network Tools")
         return sb.toString()

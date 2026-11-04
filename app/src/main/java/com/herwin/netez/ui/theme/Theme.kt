@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -17,22 +18,50 @@ import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = SoftBluePrimary,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF252A40),
+    onPrimaryContainer = SoftBluePrimary,
     secondary = SoftBlueSecondary,
+    onSecondary = Color.White,
     tertiary = SoftBlueTertiary,
     background = PremiumNavy,
-    surface = SoftDarkBg
+    surface = SoftDarkBg,
+    surfaceVariant = Color(0xFF252A40),
+    onBackground = Color.White,
+    onSurface = Color.White,
+    onSurfaceVariant = TextGray,
+    outline = Color(0xFF333A52),
+    outlineVariant = Color(0xFF2A3045),
+    error = SoftTechDanger,
+    onError = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = SoftBluePrimary,
-    secondary = SoftBlueSecondary,
-    tertiary = SoftBlueTertiary
+    primary = SoftTechPrimary,
+    onPrimary = Color.White,
+    primaryContainer = SoftTechSurfaceVariant,
+    onPrimaryContainer = SoftTechPrimary,
+    secondary = SoftTechSecondary,
+    onSecondary = Color.White,
+    secondaryContainer = SoftTechSecondary.copy(alpha = 0.15f),
+    onSecondaryContainer = SoftTechSecondary,
+    tertiary = SoftTechTertiary,
+    onTertiary = Color.White,
+    background = SoftTechBackground,
+    onBackground = SoftTechTextPrimary,
+    surface = SoftTechSurface,
+    onSurface = SoftTechTextPrimary,
+    surfaceVariant = SoftTechSurfaceVariant,
+    onSurfaceVariant = SoftTechTextSecondary,
+    outline = SoftTechBorder,
+    outlineVariant = SoftTechBorder.copy(alpha = 0.5f),
+    error = SoftTechDanger,
+    onError = Color.White
 )
 
 @Composable
 fun NeTezTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

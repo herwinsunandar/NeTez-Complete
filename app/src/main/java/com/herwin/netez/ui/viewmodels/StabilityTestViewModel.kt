@@ -1,5 +1,12 @@
 package com.herwin.netez.ui.viewmodels
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureAccessState
+import com.herwin.netez.entitlement.FeatureId
+
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -47,6 +54,8 @@ class StabilityTestViewModel(application: Application) : AndroidViewModel(applic
     private val _uiState = MutableStateFlow(StabilityState())
     val uiState: StateFlow<StabilityState> = _uiState
 
+    var showPaywallDialog by mutableStateOf(false)
+
     private val db = AppDatabase.getDatabase(application)
     private val dao = db.stabilityResultDao()
     private val prefs = application.getSharedPreferences("stability_prefs", Context.MODE_PRIVATE)
@@ -54,31 +63,31 @@ class StabilityTestViewModel(application: Application) : AndroidViewModel(applic
     fun getShareText(): String {
         val state = _uiState.value
         val res = state.lastResult ?: return "No stability test results available."
-        
+
         val sb = StringBuilder("⚡ NeTez Stability Test Report\n")
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
         sb.append("📅 Date: ${sdf.format(Date())}\n")
         sb.append("─────────────────────\n")
         sb.append("🎯 Target: ${res.target}\n")
         sb.append("🛠️ Mode: ${if (res.mode == StabilityMode.LOCAL_LOAD) "LOCAL LOAD" else "BUFFERBLOAT"}\n")
-        
+
         val isStable = res.packetLoss == 0 && res.bufferbloat < 50.0
         val statusText = if (isStable) "🟢 STABLE" else if (res.packetLoss > 5) "🔴 UNSTABLE" else "🟡 CONGESTED"
         sb.append("🛡️ Status: $statusText\n\n")
-        
+
         sb.append("📊 Stats:\n")
         sb.append("   • Avg Latency: ${String.format("%.2f", res.avgLatency)} ms\n")
         sb.append("   • Max Latency: ${String.format("%.2f", res.maxLatency)} ms\n")
-        
+
         if (res.mode == StabilityMode.BUFFERBLOAT) {
             sb.append("   • Idle Latency: ${String.format("%.2f", res.idleLatency)} ms\n")
             sb.append("   • Loaded Latency: ${String.format("%.2f", res.loadedLatency)} ms\n")
             sb.append("   • Bufferbloat Δ: ${String.format("%.2f", res.bufferbloat)} ms\n")
         }
-        
+
         sb.append("   • Success Rate: ${String.format("%.1f", res.successRate)}%\n")
         sb.append("   • Packet Loss: ${res.packetLoss}\n")
-        
+
         sb.append("─────────────────────\n")
         sb.append("Sent from NeTez Network Tools")
         return sb.toString()
@@ -102,12 +111,10 @@ class StabilityTestViewModel(application: Application) : AndroidViewModel(applic
     }
 
     init {
-        val gateway = NetworkUtils.getGateway(application)
         _uiState.update { it.copy(
-            target = if (gateway != "0.0.0.0") gateway else "192.168.1.1",
             hasConsent = checkConsent()
         ) }
-        
+
         viewModelScope.launch {
             StabilityTestManager.testUpdates.collect { update ->
                 _uiState.update { state ->
@@ -168,6 +175,12 @@ class StabilityTestViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun updateThreads(threads: Int) {
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        if (threads > 20 && !accessManager.isPro()) {
+            showPaywallDialog = true
+            _uiState.update { it.copy(threads = 20) }
+            return
+        }
         _uiState.update { it.copy(threads = threads) }
     }
 
@@ -179,6 +192,23 @@ class StabilityTestViewModel(application: Application) : AndroidViewModel(applic
         val currentState = _uiState.value
         if (currentState.isRunning) return
 
+        val accessManager = FeatureAccessManager.getInstance(getApplication())
+        if (accessManager.trackAndCheckGlobalToolUsage()) {
+            showPaywallDialog = true
+        }
+
+        val accessState = accessManager.checkAccess(FeatureId.STABILITY_TEST_DAILY)
+        if (accessState == FeatureAccessState.LIMIT_REACHED) {
+            showPaywallDialog = true
+            return
+        }
+        accessManager.consumeQuota(FeatureId.STABILITY_TEST_DAILY)
+
+        val resolvedTarget = currentState.target.trim().ifBlank {
+            val gateway = NetworkUtils.getGateway(getApplication())
+            if (gateway != "0.0.0.0") gateway else "192.168.1.1"
+        }
+
         _uiState.update { it.copy(
             isRunning = true,
             progress = 0f,
@@ -188,12 +218,13 @@ class StabilityTestViewModel(application: Application) : AndroidViewModel(applic
             maxLatency = 0.0,
             packetLoss = 0,
             successRate = 0.0,
-            showResult = false
+            showResult = false,
+            target = currentState.target.ifBlank { resolvedTarget }
         ) }
 
         if (currentState.mode == StabilityMode.LOCAL_LOAD) {
             StabilityTestManager.runLocalLoad(
-                target = currentState.target,
+                target = resolvedTarget,
                 threads = currentState.threads,
                 durationSeconds = currentState.duration,
                 onComplete = { avg, max, loss, rate ->

@@ -38,9 +38,7 @@ import com.herwin.netez.R
 import com.herwin.netez.data.AppPermissionInfo
 import com.herwin.netez.data.RiskCategory
 import com.herwin.netez.ui.AppIcons
-import com.herwin.netez.ui.theme.PremiumNavy
-import com.herwin.netez.ui.theme.SoftDarkBg
-import com.herwin.netez.ui.theme.TextGray
+import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.viewmodels.AppPermissionFilter
 import com.herwin.netez.ui.viewmodels.AppPermissionViewModel
 
@@ -59,7 +57,7 @@ fun AppPermissionScannerScreen(
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             sheetState = sheetState,
-            containerColor = SoftDarkBg
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             AppActionBottomSheet(
                 app = selectedAppForSheet!!,
@@ -72,32 +70,44 @@ fun AppPermissionScannerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Top Section: Header & Progress
         if (uiState.hasScanned || uiState.isScanning) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = SoftDarkBg,
-                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                tonalElevation = 4.dp
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+                tonalElevation = 2.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        Text(
+                            text = "Permission Risk Audit",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.isScanning) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
-                                    color = Color(0xFF6C8CFF)
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
                                 IconButton(onClick = { viewModel.startScan() }) {
-                                    Icon(AppIcons.refresh(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        painter = AppIcons.refresh(),
+                                        contentDescription = "Rescan",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -105,36 +115,60 @@ fun AppPermissionScannerScreen(
 
                     if (uiState.isScanning) {
                         LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
-                            color = Color(0xFF6C8CFF),
-                            trackColor = Color.White.copy(alpha = 0.05f)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                         )
                     }
                 }
             }
         }
 
-        // Filter & Actions Row (Match LAN Scanner)
+        // Filter & Actions Row
         if (uiState.hasScanned) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (uiState.apps.isNotEmpty()) {
-                    IconButton(onClick = { 
-                        viewModel.copyResultsToClipboard(context)
-                        Toast.makeText(context, R.string.app_scan_results_copied, Toast.LENGTH_SHORT).show()
-                    }, modifier = Modifier.size(32.dp)) {
-                        Icon(AppIcons.contentCopy(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(20.dp))
+                    IconButton(
+                        onClick = {
+                            viewModel.copyResultsToClipboard(context)
+                            Toast.makeText(context, R.string.app_scan_results_copied, Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            painter = AppIcons.contentCopy(),
+                            contentDescription = "Copy",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                    IconButton(onClick = { viewModel.shareResults(context) }, modifier = Modifier.size(32.dp)) {
-                        Icon(AppIcons.share(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(20.dp))
+                    IconButton(
+                        onClick = { viewModel.shareResults(context) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            painter = AppIcons.share(),
+                            contentDescription = "Share",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                    VerticalDivider(modifier = Modifier.height(20.dp).padding(horizontal = 4.dp), color = Color.White.copy(alpha = 0.1f))
+                    VerticalDivider(
+                        modifier = Modifier
+                            .height(20.dp)
+                            .padding(horizontal = 4.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 }
 
                 AppScanFilterChip(
@@ -142,13 +176,13 @@ fun AppPermissionScannerScreen(
                     selected = uiState.filter == AppPermissionFilter.ALL,
                     onClick = { viewModel.updateFilter(AppPermissionFilter.ALL) }
                 )
-                
+
                 val dangerousCount = uiState.apps.count { it.riskCategory == RiskCategory.DANGEROUS }
                 AppScanFilterChip(
                     label = stringResource(R.string.app_scan_filter_dangerous, dangerousCount),
                     selected = uiState.filter == AppPermissionFilter.DANGEROUS,
                     onClick = { viewModel.updateFilter(AppPermissionFilter.DANGEROUS) },
-                    color = if (dangerousCount > 0) Color(0xFFEF4444) else TextGray
+                    color = if (dangerousCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 val suspiciousCount = uiState.apps.count { it.riskCategory == RiskCategory.SUSPICIOUS }
@@ -156,7 +190,7 @@ fun AppPermissionScannerScreen(
                     label = stringResource(R.string.app_scan_filter_suspicious, suspiciousCount),
                     selected = uiState.filter == AppPermissionFilter.SUSPICIOUS,
                     onClick = { viewModel.updateFilter(AppPermissionFilter.SUSPICIOUS) },
-                    color = if (suspiciousCount > 0) Color(0xFFFBBF24) else TextGray
+                    color = if (suspiciousCount > 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 AppScanFilterChip(
@@ -175,8 +209,10 @@ fun AppPermissionScannerScreen(
 
         // Results List
         LazyColumn(
-            modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             if (!uiState.hasScanned && !uiState.isScanning) {
@@ -188,38 +224,44 @@ fun AppPermissionScannerScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(32.dp)
+                            modifier = Modifier.padding(24.dp)
                         ) {
                             Icon(
                                 painter = AppIcons.shield(),
                                 contentDescription = null,
-                                tint = Color(0xFF6C8CFF).copy(alpha = 0.3f),
-                                modifier = Modifier.size(100.dp)
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                modifier = Modifier.size(80.dp)
                             )
-                            Spacer(Modifier.height(24.dp))
+                            Spacer(Modifier.height(20.dp))
                             Text(
                                 text = stringResource(R.string.security_app_scanner_title),
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
+                                fontSize = 18.sp,
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(8.dp))
                             Text(
                                 text = stringResource(R.string.app_scan_start_desc),
-                                color = TextGray,
-                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
-                                lineHeight = 20.sp
+                                lineHeight = 18.sp
                             )
-                            Spacer(Modifier.height(32.dp))
+                            Spacer(Modifier.height(24.dp))
                             Button(
                                 onClick = { viewModel.startScan() },
-                                modifier = Modifier.fillMaxWidth().height(56.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
-                                Text(stringResource(R.string.app_scan_btn_start), fontWeight = FontWeight.ExtraBold)
+                                Text(
+                                    text = stringResource(R.string.app_scan_btn_start),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
                         }
                     }
@@ -231,8 +273,11 @@ fun AppPermissionScannerScreen(
                     if (systemCount > 0) {
                         item {
                             Surface(
-                                modifier = Modifier.fillMaxWidth().clickable { viewModel.toggleSystemApps() },
-                                color = Color(0xFF6C8CFF).copy(alpha = 0.05f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.toggleSystemApps() },
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Row(
@@ -242,9 +287,9 @@ fun AppPermissionScannerScreen(
                                 ) {
                                     Text(
                                         text = stringResource(R.string.app_scan_hidden_banner, systemCount),
-                                        color = Color(0xFF6C8CFF),
+                                        color = MaterialTheme.colorScheme.primary,
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
@@ -255,7 +300,10 @@ fun AppPermissionScannerScreen(
                 if (uiState.filteredApps.isEmpty() && !uiState.isScanning) {
                     item {
                         Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(stringResource(R.string.app_scan_empty), color = TextGray)
+                            Text(
+                                text = stringResource(R.string.app_scan_empty),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -289,84 +337,92 @@ fun AppPermissionCard(
                 onClick = {},
                 onLongClick = onLongPress
             ),
-        shape = RoundedCornerShape(20.dp),
-        color = SoftDarkBg
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // App Icon
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f)),
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
                     app.icon?.let {
                         Image(
                             bitmap = it.toBitmap().asImageBitmap(),
                             contentDescription = null,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(32.dp)
                         )
-                    } ?: Icon(AppIcons.info(), null, tint = TextGray)
+                    } ?: Icon(
+                        painter = AppIcons.info(),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(14.dp))
 
                 // App Info
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = app.appName,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = app.packageName,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF8A8FA8),
+                        fontFamily = TechMonospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    
-                    Spacer(Modifier.height(8.dp))
-                    
+
+                    Spacer(Modifier.height(6.dp))
+
                     // Chips: [SYSTEM/USER], [TRUSTED/UNKNOWN]
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (app.isSystem) {
-                            TinyChip("SYSTEM", Color(0xFF2A2E45), Color.White.copy(alpha = 0.6f))
+                            TinyChip("SYSTEM", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
-                            TinyChip("USER APP", Color(0xFF6C8CFF).copy(alpha = 0.1f), Color(0xFF6C8CFF))
+                            TinyChip("USER APP", MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), MaterialTheme.colorScheme.primary)
                         }
-                        
+
                         if (app.isTrusted) {
-                            TinyChip("TRUSTED", Color(0xFF6C8CFF).copy(alpha = 0.1f), Color(0xFF6C8CFF))
+                            TinyChip("TRUSTED", MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), MaterialTheme.colorScheme.primary)
                         } else {
-                            TinyChip("UNKNOWN", Color(0xFFFBBF24).copy(alpha = 0.1f), Color(0xFFFBBF24))
+                            TinyChip("UNKNOWN", MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f), MaterialTheme.colorScheme.tertiary)
                         }
                     }
                 }
 
-                // Risk Score Chip
+                // Risk Score Badge
                 val riskColor = when (app.riskCategory) {
-                    RiskCategory.DANGEROUS -> Color(0xFFEF4444)
-                    RiskCategory.SUSPICIOUS -> Color(0xFFFBBF24)
-                    RiskCategory.CLEAN -> Color(0xFF10B981)
+                    RiskCategory.DANGEROUS -> MaterialTheme.colorScheme.error
+                    RiskCategory.SUSPICIOUS -> MaterialTheme.colorScheme.tertiary
+                    RiskCategory.CLEAN -> MaterialTheme.colorScheme.secondary
                 }
 
                 Surface(
                     color = riskColor.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(6.dp),
-                    border = BorderStroke(1.dp, riskColor.copy(alpha = 0.3f))
+                    border = BorderStroke(1.dp, riskColor)
                 ) {
                     Text(
                         text = "${app.riskScore}",
                         color = riskColor,
+                        fontFamily = TechMonospace,
                         fontWeight = FontWeight.Black,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -375,61 +431,66 @@ fun AppPermissionCard(
             }
 
             if (app.riskReasonRes != 0) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = stringResource(app.riskReasonRes),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (app.riskCategory == RiskCategory.DANGEROUS) Color(0xFFEF4444) else TextGray,
+                    color = if (app.riskCategory == RiskCategory.DANGEROUS) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             // Permissions Tags
             @OptIn(ExperimentalLayoutApi::class)
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 app.permissions.take(5).forEach { permission ->
                     val cleanName = permission.substringAfterLast(".")
                     Surface(
-                        color = Color.White.copy(alpha = 0.05f),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                     ) {
                         Text(
                             text = cleanName,
-                            color = TextGray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = TechMonospace,
                             fontSize = 9.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                         )
                     }
                 }
                 if (app.permissions.size > 5) {
                     Text(
                         text = "+${app.permissions.size - 5}",
-                        color = TextGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 9.sp,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Action Button
-            Button(
+            OutlinedButton(
                 onClick = { onAppInfo(app.packageName) },
-                modifier = Modifier.fillMaxWidth().height(40.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White.copy(alpha = 0.05f),
-                    contentColor = Color.White
-                )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             ) {
-                Text(stringResource(R.string.app_scan_app_info), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = stringResource(R.string.app_scan_app_info),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
@@ -445,7 +506,7 @@ fun TinyChip(label: String, bgColor: Color, textColor: Color) {
             text = label,
             color = textColor,
             fontSize = 9.sp,
-            fontWeight = FontWeight.Black,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
@@ -456,18 +517,16 @@ fun AppScanFilterChip(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
-    color: Color = Color(0xFF6C8CFF)
+    color: Color = MaterialTheme.colorScheme.primary
 ) {
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, fontSize = 12.sp) },
-        shape = RoundedCornerShape(12.dp),
+        label = { Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+        shape = RoundedCornerShape(10.dp),
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = color,
-            selectedLabelColor = Color.White,
-            containerColor = Color.White.copy(alpha = 0.05f),
-            labelColor = TextGray
+            selectedContainerColor = color.copy(alpha = 0.2f),
+            selectedLabelColor = color
         ),
         border = null
     )
@@ -480,26 +539,55 @@ fun AppActionBottomSheet(
     onAppInfo: (String) -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp).padding(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             app.icon?.let {
-                Image(bitmap = it.toBitmap().asImageBitmap(), contentDescription = null, modifier = Modifier.size(48.dp))
+                Image(
+                    bitmap = it.toBitmap().asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp)
+                )
             }
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(14.dp))
             Column {
-                Text(app.appName, color = Color.White, fontWeight = FontWeight.Bold)
-                Text(app.packageName, color = TextGray, fontSize = 12.sp)
+                Text(
+                    text = app.appName,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = app.packageName,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = TechMonospace,
+                    fontSize = 11.sp
+                )
             }
         }
-        
-        HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-        
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
         ListItem(
-            headlineContent = { Text(stringResource(R.string.set_about).substringBefore(" ") + " Info", color = Color.White) },
-            leadingContent = { Icon(AppIcons.info(), null, tint = Color(0xFF6C8CFF)) },
-            modifier = Modifier.clickable { 
+            headlineContent = {
+                Text(
+                    text = stringResource(R.string.set_about).substringBefore(" ") + " Info",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            leadingContent = {
+                Icon(
+                    painter = AppIcons.info(),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            modifier = Modifier.clickable {
                 onAppInfo(app.packageName)
                 onDismiss()
             },
@@ -508,9 +596,20 @@ fun AppActionBottomSheet(
 
         if (app.isSystem) {
             ListItem(
-                headlineContent = { Text(stringResource(R.string.app_scan_disable_system), color = TextGray) },
-                leadingContent = { Icon(AppIcons.visibilityOff(), null, tint = TextGray) },
-                modifier = Modifier.clickable { 
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.app_scan_disable_system),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        painter = AppIcons.visibilityOff(),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                modifier = Modifier.clickable {
                     onAppInfo(app.packageName)
                     onDismiss()
                 },

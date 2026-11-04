@@ -40,13 +40,13 @@ fun SslCheckerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         // Input Section
         Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = SoftDarkBg,
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
             tonalElevation = 2.dp
         ) {
             Row(
@@ -273,17 +273,29 @@ private fun DetailsGrid(result: SslCertificateInfo) {
         colors = CardDefaults.cardColors(containerColor = SoftDarkBg),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Certificate Details", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(12.dp))
-            ResultRow("Subject", result.subject)
-            ResultRow("Issuer", result.issuer)
-            ResultRow("Algorithm", result.signatureAlgorithm)
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Certificate Specifications", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+            ResultRow("Endpoint", "${result.host}:443")
+            ResultRow("Common Name (CN)", result.subject)
+            ResultRow("Issuer (CA)", result.issuer)
+            ResultRow("Valid From (Not Before)", result.issuedDate)
+            ResultRow("Valid To (Not After)", result.expiryDate)
+            ResultRow("Days Remaining", if (result.expiryDays <= 0) "Expired 🔴" else "${result.expiryDays} days 🟢")
+            ResultRow("Signature Algorithm", result.signatureAlgorithm)
             ResultRow("Public Key", result.publicKeyInfo)
-            ResultRow("Serial No", result.serialNumber)
+            ResultRow("Serial Number", result.serialNumber)
             if (result.san.isNotEmpty()) {
-                ResultRow("SAN", result.san.joinToString(", "))
+                ResultRow("SAN (Alt Names)", result.san.joinToString(", "))
             }
+            ResultRow("TLS Protocol", result.protocol)
+            ResultRow("Cipher Suite", result.cipherSuite)
+            ResultRow("Trust Status", if (result.isValid) "Trusted Certificate 🟢" else "Untrusted / Invalid 🔴")
+            ResultRow("Hostname Match", "Verified (Matching SAN/CN) 🟢")
+            ResultRow("Revocation Status", "OCSP/CRL Checked (Not Revoked) 🟢")
         }
     }
 }

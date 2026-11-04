@@ -22,7 +22,7 @@ object NetBiosResolver {
         val mac: String? = null
     )
 
-    fun resolve(ip: String, timeout: Int = 1000): NetBiosInfo? {
+    fun resolve(ip: String, timeout: Int = 350): NetBiosInfo? {
         try {
             DatagramSocket().use { socket ->
                 socket.soTimeout = timeout
@@ -78,15 +78,15 @@ object NetBiosResolver {
 
         val computerName = names.find { (name, type, isGroup) ->
             !isGroup && (type == 0x00 || type == 0x03 || type == 0x20) &&
-            name != "WORKGROUP" && !name.startsWith("__MSBROWSE__")
+            !name.startsWith("__MSBROWSE__")
         }?.first
 
         val domainName = names.find { (name, type, isGroup) ->
-            isGroup && type == 0x00 && name != "WORKGROUP"
-        }?.first ?: names.find { it.first == "WORKGROUP" }?.first
+            isGroup && type == 0x00 && !name.startsWith("__MSBROWSE__")
+        }?.first
 
         return if (computerName != null || domainName != null || mac != null) {
-            NetBiosInfo(computerName ?: "Unknown", domainName, mac)
+            NetBiosInfo(computerName ?: "", domainName, mac)
         } else null
     }
 }

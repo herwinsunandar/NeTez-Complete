@@ -3,6 +3,7 @@ package com.herwin.netez.network
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -19,6 +20,8 @@ data class MdnsService(
 
 class MdnsManager(context: Context) {
     private val nsdManager = context.applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager
+    private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+    private var multicastLock: WifiManager.MulticastLock? = null
     private val resolvedServices = ConcurrentHashMap<String, MdnsService>()
     private val resolveQueue = Channel<NsdServiceInfo>(Channel.UNLIMITED)
     private var isScanning = false
@@ -48,6 +51,13 @@ class MdnsManager(context: Context) {
         if (isScanning) return@coroutineScope
         isScanning = true
         resolvedServices.clear()
+
+        try {
+            multicastLock = wifiManager?.createMulticastLock("MdnsManagerMulticastLock")?.apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        } catch (_: Exception) {}
 
         // Worker for resolving services one by one
         scanJob = launch(Dispatchers.IO) {
@@ -79,6 +89,11 @@ class MdnsManager(context: Context) {
         if (!isScanning) return
         isScanning = false
         scanJob?.cancel()
+
+        if (multicastLock?.isHeld == true) {
+            try { multicastLock?.release() } catch (_: Exception) {}
+        }
+        multicastLock = null
         
         discoveryListeners.forEach { (_, listener) ->
             try {

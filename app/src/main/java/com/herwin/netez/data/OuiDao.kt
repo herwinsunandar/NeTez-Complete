@@ -16,8 +16,14 @@ interface OuiDao {
 
 @Dao
 interface VendorOverrideDao {
+    @Query("SELECT * FROM vendor_overrides WHERE mac = :fullMac OR mac = :prefix LIMIT 1")
+    suspend fun getOverrideByMacOrPrefix(fullMac: String, prefix: String): VendorOverrideEntity?
+
     @Query("SELECT * FROM vendor_overrides WHERE mac = :mac")
     suspend fun getOverride(mac: String): VendorOverrideEntity?
+
+    @Query("SELECT * FROM vendor_overrides")
+    suspend fun getAllOverrides(): List<VendorOverrideEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOverride(entity: VendorOverrideEntity)

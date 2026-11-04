@@ -53,4 +53,70 @@
     <string name="dns_leak_see_browsing">This DNS can see your browsing</string>
 
     <string name="dns_leak_share_report">DNS Leak Test: %1$d leaks • DNS: %2$s • ISP: %3$s • VPN: %4$s • via NeTez</string>
+
+    <!-- SSL/TLS Lab -->
+    <string name="ssltls_lab_title">SSL/TLS Monitor</string>
+    <string name="ssltls_tab_my_domains">My Domains</string>
+    <string name="ssltls_tab_instant_check">Instant Check</string>
+    <string name="ssltls_input_hint">https://example.com</string>
+    <string name="ssltls_btn_check">CHECK NOW</string>
+    <string name="ssltls_empty_my_domains">No domains monitored - Add your domains to get expiry alerts + TLS grade</string>
+    <string name="ssltls_empty_instant_check">Enter domain to check certificate, TLS versions, cipher suites, vulnerabilities and grade</string>
+    <string name="ssltls_card_cert_title">Certificate Details</string>
+    <string name="ssltls_card_tls_title">TLS Versions Supported</string>
+    <string name="ssltls_card_cipher_title">Cipher Suites &amp; Encryption</string>
+    <string name="ssltls_card_chain_title">Certificate Chain</string>
+    <string name="ssltls_card_vuln_title">Vulnerabilities Scan</string>
+    <string name="ssltls_card_grade_title">SSL Security Grade</string>
+    <string name="ssltls_btn_add_to_my_domains">Add to My Domains</string>
+    <string name="ssltls_btn_share_report">Share Report</string>
+    <string name="ssltls_btn_save_note">Save to Quick Notes</string>
+    <string name="ssltls_status_valid">Valid 🟢</string>
+    <string name="ssltls_status_expired">Expired / Invalid 🔴</string>
+    <string name="ssltls_expires_in_days">Expires in %1$d days</string>
+    <string name="ssltls_expires_in_days_red">Expires in %1$d days 🔴</string>
+    <string name="ssltls_expires_in_days_green">%1$d days left 🟢</string>
+    <string name="ssltls_chain_complete">Complete Chain 🟢</string>
+    <string name="ssltls_chain_incomplete">Incomplete Chain 🟡</string>
+    <string name="ssltls_vuln_safe">SAFE 🟢</string>
+    <string name="ssltls_vuln_vulnerable">VULNERABLE 🔴</string>
+    <string name="ssltls_yes">YES 🟢</string>
+    <string name="ssltls_no_disabled">NO 🟢 (Disabled)</string>
+    <string name="ssltls_no_enabled">YES 🔴 (Insecure)</string>
+    <string name="ssltls_share_format">SSL/TLS Lab %1$s: Grade %2$s (%3$d/100), Cert valid %4$d days, %5$s, %6$d vulns - via NeTez</string>
+    <string name="ssltls_added_success">Added %1$s to My Domains</string>
+
+    <!-- Security Tools Section -->
+    <string name="security_tools_section">Security Tools</string>
+    <string name="security_tools_desc">Developer &amp; Security Cryptography Utilities</string>
+
+    <string name="sectool_hash_title">Hash Calculator</string>
+    <string name="sectool_hash_desc">Generate MD5, SHA-1, SHA-256, SHA-512</string>
+
+    <string name="sectool_base64_title">Base64 Encoder/Decoder</string>
+    <string name="sectool_base64_desc">Encode &amp; decode Base64 text &amp; files</string>
+
+    <string name="sectool_url_title">URL Encoder/Decoder</string>
+    <string name="sectool_url_desc">Encode &amp; decode URL string components</string>
+
+    <string name="sectool_jwt_title">JWT Decoder</string>
+    <string name="sectool_jwt_desc">Parse header, payload &amp; verify token expiry</string>
+
+    <string name="sectool_uuid_title">UUID Generator</string>
+    <string name="sectool_uuid_desc">Generate v4 &amp; v1 Universally Unique Identifiers</string>
+
+    <string name="sectool_token_title">Random Token Generator</string>
+    <string name="sectool_token_desc">Generate cryptographically secure tokens</string>
+
+    <string name="sectool_hmac_title">HMAC Generator</string>
+    <string name="sectool_hmac_desc">Hash-based message authentication code</string>
+
+    <string name="sectool_checksum_title">Checksum Calculator</string>
+    <string name="sectool_checksum_desc">Verify file MD5, SHA-256, CRC32, Adler32</string>
+
+    <string name="sectool_timestamp_title">Timestamp Converter</string>
+    <string name="sectool_timestamp_desc">Convert epoch seconds/millis to ISO8601 &amp; date</string>
+
+    <string name="sectool_regex_title">Regex Tester</string>
+    <string name="sectool_regex_desc">Test regular expressions &amp; inspect match groups</string>
 </resources>

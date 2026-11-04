@@ -7,6 +7,7 @@ import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import androidx.core.content.ContextCompat
+import com.herwin.netez.R
 
 object BiometricHelper {
 
@@ -37,7 +38,7 @@ object BiometricHelper {
 
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
-                    onError("Autentikasi gagal")
+                    onError(activity.getString(R.string.auth_failed))
                 }
             })
 

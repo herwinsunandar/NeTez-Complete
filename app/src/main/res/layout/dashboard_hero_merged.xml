@@ -5,7 +5,7 @@
     android:id="@+id/hero_card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="16dp"
+    android:layout_margin="0dp"
     app:cardCornerRadius="24dp"
     app:cardElevation="0dp"
     app:strokeWidth="0dp">
@@ -20,7 +20,7 @@
             android:id="@+id/tv_ssid"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="BRI-Digital"
+            android:text="Detecting Network..."
             android:textColor="@android:color/white"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -32,7 +32,7 @@
             android:id="@+id/tv_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/wifi_network"
+            android:text="Checking status..."
             android:textColor="#B3FFFFFF"
             android:textSize="12sp"
             app:layout_constraintStart_toStartOf="parent"
@@ -81,7 +81,7 @@
                     android:id="@+id/tv_local_ip_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="10.168.72.241"
+                    android:text="---"
                     android:textColor="@android:color/white"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -104,7 +104,7 @@
                     android:id="@+id/tv_public_ip_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="103.143.106.246"
+                    android:text="---"
                     android:textColor="@android:color/white"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -129,7 +129,7 @@
                     android:id="@+id/tv_gateway_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="10.168.64.1"
+                    android:text="---"
                     android:textColor="@android:color/white"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -155,7 +155,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="PT Aplikanusa Lintasarta • Bandung, ID"
+                    android:text="Resolving ISP..."
                     android:textColor="@android:color/white"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -202,7 +202,7 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:text="⚠️ 3 Issues • WPS ON • 1 SSL expires • 2 risky"
+                android:text="Calculating security posture..."
                 android:textColor="#D9FFFFFF"
                 android:textSize="12sp" />
 

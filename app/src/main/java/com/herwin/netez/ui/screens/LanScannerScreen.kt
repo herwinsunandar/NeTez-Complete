@@ -19,6 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,14 +43,20 @@ import com.herwin.netez.R
 import com.herwin.netez.network.Device
 import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.components.ResultRow
-import com.herwin.netez.ui.theme.PremiumNavy
 import com.herwin.netez.ui.theme.SoftDarkBg
+import com.herwin.netez.ui.theme.SoftTechSecondary
+import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.LanFilter
 import com.herwin.netez.ui.viewmodels.LanScannerViewModel
+import com.herwin.netez.ui.viewmodels.LanSortOption
+import com.herwin.netez.ui.viewmodels.NetworkSummaryInfo
 import com.herwin.netez.ui.viewmodels.ScanMode
 import java.text.SimpleDateFormat
 import java.util.*
+
+import com.herwin.netez.entitlement.FeatureId
+import com.herwin.netez.ui.components.ContextualPaywallDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,27 +68,42 @@ fun LanScannerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    if (viewModel.showGlobalSupportDialog) {
+        ContextualPaywallDialog(
+            featureId = FeatureId.GLOBAL_TOOL_USAGE,
+            limitText = "You've performed 3 network & security scans! If NeTez is helpful, consider watching a short video to support development or upgrade to PRO (Skippable).",
+            onDismiss = { viewModel.showGlobalSupportDialog = false },
+            onUpgradeClick = {}
+        )
+    }
     
     var showIdentifyDialog by remember { mutableStateOf(false) }
-    var selectedMacToIdentify by remember { mutableStateOf("") }
+    var selectedDeviceToIdentify by remember { mutableStateOf<Device?>(null) }
+    var showSortMenu by remember { mutableStateOf(false) }
+    var showExportMenu by remember { mutableStateOf(false) }
 
-    if (showIdentifyDialog) {
-        var customLabel by remember { mutableStateOf("") }
+    if (showIdentifyDialog && selectedDeviceToIdentify != null) {
+        val targetDevice = selectedDeviceToIdentify!!
+        var customLabel by remember { 
+            mutableStateOf(
+                targetDevice.vendor.takeIf { it != "Unknown" && it != "Unknown Vendor" && it != "Resolving..." } ?: ""
+            ) 
+        }
         AlertDialog(
             onDismissRequest = { showIdentifyDialog = false },
-            containerColor = SoftDarkBg,
-            title = { Text("Identify Device", color = Color.White) },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Rename / Label Device", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Manually label this device (MAC: $selectedMacToIdentify)", color = TextGray, fontSize = 12.sp)
+                    Text("Enter custom name for ${targetDevice.ip} (${if (targetDevice.mac != "00:00:00:00:00:00") targetDevice.mac else "MAC Hidden"})", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     OutlinedTextField(
                         value = customLabel,
                         onValueChange = { customLabel = it },
-                        placeholder = { Text("e.g. Living Room TV", color = TextGray) },
+                        placeholder = { Text("e.g. Living Room Smart TV", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedTextColor = Color.White,
-                            focusedTextColor = Color.White,
-                            focusedBorderColor = Color(0xFF6C8CFF)
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -85,7 +111,9 @@ fun LanScannerScreen(
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.saveVendorOverride(selectedMacToIdentify, customLabel)
+                    if (customLabel.isNotBlank()) {
+                        viewModel.saveVendorOverride(targetDevice.ip, targetDevice.mac, customLabel)
+                    }
                     showIdentifyDialog = false
                 }) {
                     Text("Save")
@@ -102,36 +130,68 @@ fun LanScannerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // 1. Top Input Section
+        // 1. Top Control & Scan Input Section
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = SoftDarkBg,
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
             tonalElevation = 4.dp
         ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Segmented Control
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = uiState.mode == ScanMode.SINGLE,
-                        onClick = { viewModel.updateMode(ScanMode.SINGLE) },
-                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
-                        label = { Text("Single", fontSize = 12.sp) }
-                    )
-                    SegmentedButton(
-                        selected = uiState.mode == ScanMode.RANGE,
-                        onClick = { viewModel.updateMode(ScanMode.RANGE) },
-                        shape = RoundedCornerShape(0.dp),
-                        label = { Text("Range", fontSize = 12.sp) }
-                    )
-                    SegmentedButton(
-                        selected = uiState.mode == ScanMode.CIDR,
-                        onClick = { viewModel.updateMode(ScanMode.CIDR) },
-                        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
-                        label = { Text("CIDR", fontSize = 12.sp) }
-                    )
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // Toolbar Row (Sort, Export, Clear)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
+                        SegmentedButton(
+                            selected = uiState.mode == ScanMode.SINGLE,
+                            onClick = { viewModel.updateMode(ScanMode.SINGLE) },
+                            shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                            label = { Text("Single", fontSize = 11.sp) }
+                        )
+                        SegmentedButton(
+                            selected = uiState.mode == ScanMode.RANGE,
+                            onClick = { viewModel.updateMode(ScanMode.RANGE) },
+                            shape = RoundedCornerShape(0.dp),
+                            label = { Text("Range", fontSize = 11.sp) }
+                        )
+                        SegmentedButton(
+                            selected = uiState.mode == ScanMode.CIDR,
+                            onClick = { viewModel.updateMode(ScanMode.CIDR) },
+                            shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
+                            label = { Text("CIDR", fontSize = 11.sp) }
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Sort Dropdown
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                            DropdownMenuItem(text = { Text("Sort by IP") }, onClick = { viewModel.updateSortOption(LanSortOption.IP); showSortMenu = false })
+                            DropdownMenuItem(text = { Text("Sort by Latency") }, onClick = { viewModel.updateSortOption(LanSortOption.LATENCY); showSortMenu = false })
+                            DropdownMenuItem(text = { Text("Sort by Vendor") }, onClick = { viewModel.updateSortOption(LanSortOption.VENDOR); showSortMenu = false })
+                            DropdownMenuItem(text = { Text("Sort by Name") }, onClick = { viewModel.updateSortOption(LanSortOption.NAME); showSortMenu = false })
+                        }
+                    }
+
+                    // Export Dropdown
+                    Box {
+                        IconButton(onClick = { showExportMenu = true }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Export Options", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        DropdownMenu(expanded = showExportMenu, onDismissRequest = { showExportMenu = false }) {
+                            DropdownMenuItem(text = { Text("Export CSV") }, onClick = { viewModel.exportCsv(context); showExportMenu = false })
+                            DropdownMenuItem(text = { Text("Export JSON") }, onClick = { viewModel.exportJson(context); showExportMenu = false })
+                        }
+                    }
                 }
 
                 Row(
@@ -158,80 +218,86 @@ fun LanScannerScreen(
                         modifier = Modifier.height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (uiState.isScanning) Color(0xFFEF4444) else Color(0xFF6C8CFF)
+                            containerColor = if (uiState.isScanning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         )
                     ) {
                         if (uiState.isScanning) {
                             Icon(AppIcons.stop(), null)
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text("STOP", fontWeight = FontWeight.Bold)
                         } else {
                             Icon(AppIcons.scan(), null)
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text("SCAN", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
-                if (uiState.isScanning || uiState.progress > 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        LinearProgressIndicator(
-                            progress = { uiState.progress },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                            color = Color(0xFF6C8CFF),
-                            trackColor = Color.White.copy(alpha = 0.05f)
+                // 2. Scan Header & Progress
+                if (uiState.isScanning) {
+                    LinearProgressIndicator(
+                        progress = { uiState.progress },
+                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+
+                // 2-Line Header Hierarchy
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = uiState.progressText.ifEmpty { "Found ${uiState.devices.count { it.isOnline }} devices" },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (!uiState.ispInfo.isNullOrEmpty()) {
+                        Text(
+                            text = uiState.ispInfo!!,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp
                         )
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(
-                                uiState.progressText.ifEmpty { "Scanning... ${(uiState.progress * 100).toInt()}%" },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextGray
-                            )
-                            uiState.ispInfo?.let { 
-                                Text(it, style = MaterialTheme.typography.labelSmall, color = Color(0xFF6C8CFF))
-                            }
-                        }
-                    }
-                } else {
-                    // Show ISP Info when not scanning
-                    uiState.ispInfo?.let {
-                        Surface(
-                            color = Color(0xFF6C8CFF).copy(alpha = 0.05f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(AppIcons.public(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(it, color = TextGray, fontSize = 11.sp)
-                            }
-                        }
                     }
                 }
             }
         }
 
-        // 2. Filter & Results
+        // 2. Scrollable Device List with Network Summary & Padding
         LazyColumn(
             modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
+            contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp) // Ensure last card not covered by bottom nav
         ) {
-            item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clickable { onNavigateToWifiAudit() },
-                    color = Color(0xFFEF4444).copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.2f))
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(AppIcons.warning(), null, tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Text("⚠️ WiFi tidak aman - Tap untuk audit keamanan", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            // AP Isolation Warning
+            if (uiState.isApIsolationDetected) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFFBBF24).copy(alpha = 0.1f),
+                        border = BorderStroke(1.dp, Color(0xFFFBBF24).copy(alpha = 0.3f))
+                    ) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(AppIcons.warning(), contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Router AP Isolation may be active. Only Gateway and local device were found. Other Wi-Fi devices may be isolated by router security policy.",
+                                color = Color(0xFFFBBF24),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
 
+            // Network Summary Card
+            item {
+                LanNetworkSummaryCard(uiState.networkSummary)
+            }
+
+            // Filter Chips Row
             if (uiState.devices.isNotEmpty()) {
                 item {
                     Row(
@@ -239,31 +305,38 @@ fun LanScannerScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Action Icons (Copy & Share)
                         if (uiState.devices.isNotEmpty()) {
                             IconButton(onClick = { 
                                 viewModel.copyResultsToClipboard(context)
                                 Toast.makeText(context, "Results copied", Toast.LENGTH_SHORT).show()
                             }, modifier = Modifier.size(32.dp)) {
-                                Icon(AppIcons.contentCopy(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(20.dp))
+                                Icon(AppIcons.contentCopy(), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             }
                             IconButton(onClick = { viewModel.shareResults(context) }, modifier = Modifier.size(32.dp)) {
-                                Icon(AppIcons.share(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(20.dp))
+                                Icon(AppIcons.share(), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             }
-                            VerticalDivider(modifier = Modifier.height(20.dp).padding(horizontal = 4.dp), color = Color.White.copy(alpha = 0.1f))
+                            if (uiState.devices.any { !it.isOnline }) {
+                                IconButton(onClick = { 
+                                    viewModel.clearHistory()
+                                    Toast.makeText(context, "LAN history cleared", Toast.LENGTH_SHORT).show()
+                                }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Default.DeleteSweep, "Clear History", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            VerticalDivider(modifier = Modifier.height(20.dp).padding(horizontal = 4.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                         }
 
                         val listedCount = uiState.devices.count { it.riskScore > 0 }
                         
                         LanFilterChip("All (${uiState.devices.size})", uiState.filter == LanFilter.ALL) { viewModel.updateFilter(LanFilter.ALL) }
-                        
                         SummaryMiniChip("${uiState.devices.count { it.isOnline }} Clean", Color(0xFF10B981))
-                        SummaryMiniChip("${uiState.devices.count { it.riskScore > 0 }} Listed", if (listedCount > 0) Color(0xFFEF4444) else TextGray)
+                        SummaryMiniChip("${uiState.devices.count { it.riskScore > 0 }} Listed", if (listedCount > 0) MaterialTheme.colorScheme.error else TextGray)
                         
                         LanFilterChip("Phone", uiState.filter == LanFilter.PHONE) { viewModel.updateFilter(LanFilter.PHONE) }
                         LanFilterChip("PC", uiState.filter == LanFilter.PC) { viewModel.updateFilter(LanFilter.PC) }
                         LanFilterChip("Router", uiState.filter == LanFilter.ROUTER) { viewModel.updateFilter(LanFilter.ROUTER) }
                         LanFilterChip("IoT", uiState.filter == LanFilter.IOT) { viewModel.updateFilter(LanFilter.IOT) }
+                        LanFilterChip("Bluetooth", uiState.filter == LanFilter.BLUETOOTH) { viewModel.updateFilter(LanFilter.BLUETOOTH) }
                         LanFilterChip("Online", uiState.filter == LanFilter.ONLINE) { viewModel.updateFilter(LanFilter.ONLINE) }
                     }
                 }
@@ -281,12 +354,56 @@ fun LanScannerScreen(
                         context.startActivity(intent)
                     },
                     onIdentify = { 
-                        selectedMacToIdentify = it
+                        selectedDeviceToIdentify = it
                         showIdentifyDialog = true
-                    }
+                    },
+                    onDelete = { viewModel.deleteDevice(it.mac) }
                 )
             }
         }
+    }
+}
+
+@Composable
+fun LanNetworkSummaryCard(summary: NetworkSummaryInfo) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        tonalElevation = 2.dp
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(AppIcons.lan(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "${summary.ssid} • ${summary.aliveCount} Alive / ${summary.scannedCount} Scanned",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                SummaryItem("Gateway", summary.gateway)
+                SummaryItem("Subnet Mask", summary.subnetMask)
+                SummaryItem("DNS Server", summary.dnsServer)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                SummaryItem("My IP", summary.myIp)
+                SummaryItem("My MAC", summary.myMac)
+                SummaryItem("BSSID", summary.bssid)
+            }
+        }
+    }
+}
+
+@Composable
+fun SummaryItem(label: String, value: String) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+        Text(value, style = MaterialTheme.typography.bodySmall, fontFamily = TechMonospace, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
     }
 }
 
@@ -295,14 +412,14 @@ fun InputField(value: String, placeholder: String, onValueChange: (String) -> Un
     TextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = TextGray) },
+        placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.White.copy(alpha = 0.05f),
-            unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         ),
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -337,42 +454,57 @@ fun DeviceProCard(
     onPing: (String) -> Unit,
     onPorts: (String) -> Unit,
     onInfo: (String) -> Unit,
-    onIdentify: (String) -> Unit
+    onIdentify: (Device) -> Unit,
+    onDelete: (Device) -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+
+    val hostnameDisplay = if (device.hostname.isBlank() || device.hostname == "Unknown" || device.hostname == "Unknown Host" || device.hostname == "Probing...") "—" else device.hostname
+
+    val osGuess = when {
+        device.os != "Unknown" -> device.os
+        device.openPorts.contains(445) || device.openPorts.contains(139) -> "Windows"
+        device.openPorts.contains(62078) || device.vendor.contains("Apple", true) -> "iOS / macOS"
+        device.vendor.contains("Samsung", true) || device.vendor.contains("Xiaomi", true) || device.vendor.contains("Android", true) -> "Android OS"
+        device.vendor.contains("Cisco", true) || device.vendor.contains("MikroTik", true) || device.vendor.contains("TP-Link", true) -> "RouterOS / Embedded"
+        else -> "Linux / Embedded"
+    }
+
+    val ipStatus = if (device.isGateway || device.ip.endsWith(".1") || device.ip.endsWith(".254")) "Static IP" else "DHCP"
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = SoftDarkBg,
-        border = if (expanded) BorderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.3f)) else null
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, if (expanded) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        tonalElevation = 2.dp
     ) {
         Column(modifier = Modifier.clickable { expanded = !expanded }.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Left: Icon + Status
+                // Left: Device Icon
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(52.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f)),
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(getProDeviceIcon(device.deviceType)),
                         contentDescription = null,
-                        tint = if (device.isOnline) Color.White else TextGray,
+                        tint = if (device.isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(28.dp)
                     )
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(6.dp)
+                            .padding(4.dp)
                             .size(10.dp)
                             .clip(CircleShape)
                             .background(if (device.isOnline) Color(0xFF10B981) else Color.Gray)
-                            .border(2.dp, SoftDarkBg, CircleShape)
                     )
                 }
 
@@ -381,23 +513,39 @@ fun DeviceProCard(
                 // Center: Details
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(device.ip, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                        Text(device.ip, style = MaterialTheme.typography.titleMedium, fontFamily = TechMonospace, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                         if (device.isThisDevice) {
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(6.dp))
                             Surface(color = Color(0xFF10B981).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
                                 Text("THIS DEVICE", color = Color(0xFF10B981), fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                             }
                         }
                         if (device.isGateway) {
-                            Spacer(Modifier.width(8.dp))
-                            Surface(color = Color(0xFF6C8CFF).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
-                                Text("GW", color = Color(0xFF6C8CFF), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                                Text("GW", color = MaterialTheme.colorScheme.primary, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                             }
                         }
                         if (device.isRandomMac) {
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(6.dp))
                             Surface(color = Color(0xFFFBBF24).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
-                                Text("PRV", color = Color(0xFFFBBF24), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+                                Text("PRV", color = Color(0xFFFBBF24), fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                            }
+                        }
+                        if (device.isBluetoothNearby || device.bluetoothName != null) {
+                            Spacer(Modifier.width(6.dp))
+                            Surface(color = SoftTechSecondary.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
+                                    Icon(AppIcons.bluetooth(), contentDescription = null, tint = SoftTechSecondary, modifier = Modifier.size(10.dp))
+                                    Spacer(Modifier.width(2.dp))
+                                    Text("BT NEARBY", color = SoftTechSecondary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        if (!device.isOnline) {
+                            Spacer(Modifier.width(6.dp))
+                            Surface(color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                                Text("SAVED", color = MaterialTheme.colorScheme.tertiary, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                             }
                         }
                     }
@@ -412,81 +560,54 @@ fun DeviceProCard(
                         Text(
                             text = displayVendor, 
                             style = MaterialTheme.typography.bodySmall, 
-                            color = if (displayVendor.contains("Unknown")) TextGray else Color(0xFF6C8CFF),
-                            fontWeight = if (displayVendor.contains("Unknown")) FontWeight.Normal else FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         if (vendorMap.containsKey(device.mac)) {
                             Spacer(Modifier.width(4.dp))
-                            Surface(color = Color(0xFF6C8CFF).copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
-                                Text("CUSTOM", color = Color(0xFF6C8CFF), fontSize = 8.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                            Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                                Text("CUSTOM", color = MaterialTheme.colorScheme.primary, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                             }
                         }
-                        if (device.hostnameSource == "mDNS") {
-                            Spacer(Modifier.width(6.dp))
-                            Icon(AppIcons.link(), null, tint = Color(0xFF6C8CFF), modifier = Modifier.size(10.dp))
-                        }
                     }
-                    
-                    val displayDetails = listOfNotNull(
-                        if (device.deviceCategory != "Unknown") device.deviceCategory else null,
-                        if (device.deviceType != "Unknown") device.deviceType else null
-                    ).joinToString(" • ")
 
-                    val displayHostname = when {
-                        device.isThisDevice -> device.hostname
-                        device.hostname != "Unknown" && displayDetails.isNotEmpty() -> "${device.hostname} • $displayDetails"
-                        device.hostname != "Unknown" -> device.hostname
-                        displayDetails.isNotEmpty() -> displayDetails
-                        else -> "Unknown Host"
-                    }
-                    
                     Text(
-                        text = displayHostname, 
+                        text = hostnameDisplay, 
                         style = MaterialTheme.typography.labelSmall, 
-                        color = TextGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Right: Latency + Connection Icon
+                // Right: Latency Badge
                 Column(horizontalAlignment = Alignment.End) {
-                    Icon(
-                        painter = painterResource(if (device.connectionType == "WiFi") R.drawable.ic_wifi else R.drawable.ic_settings_ethernet),
-                        contentDescription = null,
-                        tint = TextGray.copy(alpha = 0.5f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    
-                    val latencyColor = when {
-                        !device.isOnline -> Color.Gray
-                        device.isThisDevice || device.latencyMs == 0L || device.latencyMs > 800 -> Color(0xFF10B981)
-                        device.latencyMs < 300 -> Color(0xFF10B981)
-                        device.latencyMs <= 800 -> Color(0xFFFBBF24)
-                        else -> Color(0xFFEF4444)
-                    }
-                    
-                    val latencyText = when {
-                        !device.isOnline -> "Offline"
-                        device.isThisDevice || device.latencyMs == 0L || device.latencyMs > 800 -> "Cached"
-                        device.hostnameSource == "NetBIOS" -> "NB: ${device.latencyMs}ms"
-                        else -> "${device.latencyMs}ms"
+                    val (latencyColor, latencyText) = when {
+                        !device.isOnline -> Pair(MaterialTheme.colorScheme.error, "Offline")
+                        device.isThisDevice -> Pair(Color(0xFF10B981), "Local")
+                        device.latencyMs < 100L -> Pair(Color(0xFF10B981), "${device.latencyMs}ms")
+                        device.latencyMs in 100L..300L -> Pair(Color(0xFFFBBF24), "${device.latencyMs}ms")
+                        else -> Pair(Color(0xFFFF8C42), "${device.latencyMs}ms")
                     }
 
                     Surface(
                         color = latencyColor.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(6.dp),
-                        border = BorderStroke(1.dp, latencyColor.copy(alpha = 0.3f))
+                        border = BorderStroke(1.dp, latencyColor.copy(alpha = 0.3f)),
+                        modifier = Modifier.clickable {
+                            if (!device.isOnline || device.latencyMs == 0L) {
+                                Toast.makeText(context, "Stored device info from recent scan", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     ) {
                         Text(
-                            text = latencyText,
+                            text = if (!device.isOnline) "Last Active (Cached)" else latencyText,
                             color = latencyColor,
                             fontWeight = FontWeight.Black,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            fontSize = 9.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                         )
                     }
                 }
@@ -498,71 +619,69 @@ fun DeviceProCard(
                 exit = shrinkVertically()
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-                    ResultRow("MAC Address", device.mac)
-                    if (device.isRandomMac) {
-                        Text("Locally Administered Address (Randomized)", color = Color(0xFFFBBF24), fontSize = 10.sp, modifier = Modifier.padding(start = 16.dp))
-                    }
-                    if (!device.isOnline) {
-                        val diff = System.currentTimeMillis() - device.lastSeen
-                        val timeAgo = when {
-                            diff < 60000 -> "Just now"
-                            diff < 3600000 -> "${diff / 60000}m ago"
-                            else -> dateFormat.format(Date(device.lastSeen))
+                    ResultRow("Hostname", hostnameDisplay, isTechnicalData = true)
+                    ResultRow("MAC Address", device.mac, isTechnicalData = true)
+                    ResultRow("Device Type", "${device.deviceType} (${device.deviceCategory})")
+                    ResultRow("OS Guess", osGuess)
+                    ResultRow("IP Status", ipStatus)
+                    ResultRow("First Seen", dateFormat.format(Date(device.firstSeen)))
+                    ResultRow("Last Seen", dateFormat.format(Date(device.lastSeen)))
+
+                    if (device.isBluetoothNearby || device.bluetoothName != null) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        Text("Bluetooth Profile", style = MaterialTheme.typography.labelSmall, color = SoftTechSecondary, fontWeight = FontWeight.Bold)
+                        ResultRow("Bluetooth Name", device.bluetoothName ?: "—", isTechnicalData = true)
+                        if (!device.bluetoothMac.isNullOrBlank()) {
+                            ResultRow("Bluetooth MAC", device.bluetoothMac, isTechnicalData = true)
                         }
-                        ResultRow("Last Seen", timeAgo)
-                    } else {
-                        ResultRow("Last Active", timeFormat.format(Date(device.lastSeen)))
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ActionButton(AppIcons.networkCheck(), "PING", Modifier.weight(1f)) { onPing(device.ip) }
-                        
-                        Button(
-                            onClick = { onPorts(device.ip) },
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isScanningPorts) Color(0xFF6C8CFF).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
-                                contentColor = Color.White
-                            ),
-                            contentPadding = PaddingValues(0.dp),
-                            enabled = !isScanningPorts
-                        ) {
-                            if (isScanningPorts) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
-                            } else {
-                                Icon(AppIcons.search(), null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("PORTS", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
+                        if (device.bluetoothRssi != null) {
+                            ResultRow("Signal Strength", "${device.bluetoothRssi} dBm", isTechnicalData = true)
                         }
-
-                        ActionButton(AppIcons.person(), "IDENTIFY", Modifier.weight(1f)) { onIdentify(device.mac) }
                     }
 
+                    // Open Ports Section
                     if (device.hasPerformedPortScan || device.openPorts.isNotEmpty()) {
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                        Text("Open Ports", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        Text("Open Ports", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         
                         if (device.openPorts.isEmpty()) {
-                            Text("No open ports detected", color = Color(0xFFEF4444).copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Text("No open ports detected", color = MaterialTheme.colorScheme.error, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         } else {
+                            val maxVisiblePorts = 5
+                            val visiblePorts = device.openPorts.take(maxVisiblePorts)
+                            val remainingPorts = device.openPorts.size - maxVisiblePorts
+
                             @OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                device.openPorts.forEach { port ->
+                                visiblePorts.forEach { port ->
                                     Surface(
-                                        color = Color(0xFF6C8CFF).copy(alpha = 0.1f),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
                                         shape = RoundedCornerShape(8.dp),
-                                        border = BorderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.2f))
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                                     ) {
                                         Text(
                                             text = port.toString(),
-                                            color = Color(0xFF6C8CFF),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = 11.sp,
+                                            fontFamily = TechMonospace,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                                if (remainingPorts > 0) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "+$remainingPorts more",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -570,6 +689,39 @@ fun DeviceProCard(
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ActionButton(AppIcons.networkCheck(), "PING", Modifier.weight(1f)) { onPing(device.ip) }
+                        
+                        Button(
+                            onClick = { onPorts(device.ip) },
+                            modifier = Modifier.weight(1f).height(40.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isScanningPorts) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            contentPadding = PaddingValues(0.dp),
+                            enabled = !isScanningPorts
+                        ) {
+                            if (isScanningPorts) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                Icon(AppIcons.search(), null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("PORTS", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        ActionButton(AppIcons.edit(), "RENAME", Modifier.weight(1f)) { onIdentify(device) }
+                        
+                        IconButton(
+                            onClick = { onDelete(device) },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete device", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -584,7 +736,7 @@ fun ActionButton(painter: Painter, label: String, modifier: Modifier, onClick: (
         onClick = onClick,
         modifier = modifier.height(40.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f), contentColor = Color.White),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurface),
         contentPadding = PaddingValues(0.dp)
     ) {
         Icon(painter, null, modifier = Modifier.size(16.dp))
@@ -601,25 +753,29 @@ fun LanFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
         label = { Text(label, fontSize = 12.sp) },
         shape = RoundedCornerShape(12.dp),
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = Color(0xFF6C8CFF),
-            selectedLabelColor = Color.White,
-            containerColor = Color.White.copy(alpha = 0.05f),
-            labelColor = TextGray
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         border = null
     )
 }
 
-fun getProDeviceIcon(type: String): Int {
-    return when (type) {
-        "Router" -> R.drawable.ic_router
-        "iPhone" -> R.drawable.ic_phone_iphone
-        "Android" -> R.drawable.ic_phone_android
-        "PC" -> R.drawable.ic_laptop
-        "Mac" -> R.drawable.ic_desktop_mac
-        "Printer" -> R.drawable.ic_print
-        "Smart TV" -> R.drawable.ic_tv
-        "IoT" -> R.drawable.ic_sensors
+fun getProDeviceIcon(deviceType: String): Int {
+    val t = deviceType.lowercase()
+    return when {
+        t.contains("router") || t.contains("gateway") -> R.drawable.ic_router
+        t.contains("iphone") -> R.drawable.ic_phone_iphone
+        t.contains("android") || t.contains("phone") || t.contains("mobile") -> R.drawable.ic_phone_android
+        t.contains("mac") -> R.drawable.ic_desktop_mac
+        t.contains("pc") || t.contains("computer") || t.contains("windows") -> R.drawable.ic_desktop_windows
+        t.contains("laptop") -> R.drawable.ic_laptop
+        t.contains("printer") -> R.drawable.ic_print
+        t.contains("tv") -> R.drawable.ic_tv
+        t.contains("camera") || t.contains("cctv") || t.contains("nvr") || t.contains("dvr") -> R.drawable.ic_security
+        t.contains("iot") || t.contains("smart") || t.contains("embedded") -> R.drawable.ic_memory
+        t.contains("watch") || t.contains("wearable") -> R.drawable.ic_watch
         else -> R.drawable.ic_devices
     }
 }

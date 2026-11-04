@@ -10,8 +10,7 @@ import com.herwin.netez.R
 import com.herwin.netez.data.AppDatabase
 import com.herwin.netez.data.SecurityPreferences
 import com.herwin.netez.data.entities.SslDomain
-import com.herwin.netez.network.SslManager
-import java.text.SimpleDateFormat
+import com.herwin.netez.engine.SslTlsEngine
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -24,35 +23,52 @@ class SslReminderWorker(
         val db = AppDatabase.getDatabase(applicationContext)
         val sslDao = db.sslDomainDao()
         val securityPrefs = SecurityPreferences(applicationContext)
-        
+
         // Respect Global Toggle
         if (!securityPrefs.isSslReminderEnabled) {
             return Result.success()
         }
-
-        val sslManager = SslManager()
-        val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm:ss z", Locale.ENGLISH)
 
         val domains = sslDao.getAllDomainsList()
         if (domains.isEmpty()) return Result.success()
 
         domains.forEach { domain ->
             try {
-                val info = sslManager.checkSsl(domain.domain)
-                val expiryDateLong = try {
-                    dateFormat.parse(info.expiryDate)?.time ?: 0L
-                } catch (e: Exception) { 0L }
+                val res = SslTlsEngine.checkDomain(domain.domain)
 
-                val updatedDomain = domain.copy(
-                    expiryDate = expiryDateLong,
-                    daysLeft = info.expiryDays.toInt(),
-                    issuer = info.issuer,
-                    lastChecked = System.currentTimeMillis()
-                )
+                val isResultValid = res.certificate.valid &&
+                        !res.certificate.issuer.startsWith("Error", ignoreCase = true) &&
+                        res.certificate.expiresInDays >= 0 &&
+                        res.certificate.expiryDate.time > 0L
+
+                val updatedDomain = if (isResultValid) {
+                    val vulnCount = listOf(res.vulnerabilities.poodle, res.vulnerabilities.beast, res.vulnerabilities.robot).count { it }
+                    domain.copy(
+                        expiryDate = res.certificate.expiryDate.time,
+                        daysLeft = res.certificate.expiresInDays,
+                        issuer = res.certificate.issuer.substringBefore(','),
+                        tlsVersion = if (res.tlsVersions.tls13) "TLS 1.3" else if (res.tlsVersions.tls12) "TLS 1.2" else "TLS 1.0",
+                        grade = res.grade.letter,
+                        score = res.grade.score,
+                        cipher = res.cipherSuites.firstOrNull()?.name ?: domain.cipher,
+                        vulnCount = vulnCount,
+                        chainValid = res.chain.complete,
+                        lastChecked = System.currentTimeMillis(),
+                        lastVulnCheck = System.currentTimeMillis()
+                    )
+                } else {
+                    // Protect existing valid domain record from background network timeouts/glitches
+                    domain.copy(lastChecked = System.currentTimeMillis())
+                }
+
                 sslDao.insertDomain(updatedDomain)
 
-                checkAndNotify(updatedDomain, securityPrefs)
-            } catch (e: Exception) {}
+                if (isResultValid) {
+                    checkAndNotify(updatedDomain, securityPrefs)
+                }
+            } catch (e: Exception) {
+                // If background check failed, keep existing valid domain record
+            }
         }
 
         return Result.success()
@@ -61,36 +77,43 @@ class SslReminderWorker(
     private fun checkAndNotify(domain: SslDomain, securityPrefs: SecurityPreferences) {
         val configDays = securityPrefs.defaultReminderDays.split(',').mapNotNull { it.trim().toIntOrNull() }
         val domainDays = domain.reminderDays.split(',').mapNotNull { it.trim().toIntOrNull() }
-        
-        // Use domain specific days if set, otherwise use global default
-        val reminderDays = if (domainDays.isNotEmpty()) domainDays else configDays
-        
-        val notifiedDays = domain.notifiedDays.split(',').mapNotNull { it.trim().toIntOrNull() }.toMutableSet()
 
-        val currentDaysLeft = domain.daysLeft
-        
+        val reminderDays = if (configDays.isNotEmpty()) configDays else domainDays
+        val currentDaysLeft = domain.realDaysLeft
+
         if (currentDaysLeft <= 0) {
             sendNotification(
                 id = domain.domain.hashCode(),
-                title = applicationContext.getString(R.string.ssl_notification_expired, domain.domain),
-                message = "Certificate has expired!"
+                title = "🔴 SSL Expired: ${domain.domain}",
+                message = "Certificate for ${domain.domain} has expired! Please renew immediately."
             )
             return
         }
 
-        reminderDays.forEach { day ->
-            if (currentDaysLeft <= day && !notifiedDays.contains(day)) {
-                sendNotification(
-                    id = domain.domain.hashCode() + day,
-                    title = applicationContext.getString(R.string.ssl_notification_title, domain.domain, currentDaysLeft),
-                    message = "Certificate will expire in $currentDaysLeft days."
-                )
-                notifiedDays.add(day)
-            }
+        if (domain.grade == "F") {
+            sendNotification(
+                id = domain.domain.hashCode() + 999,
+                title = "🚨 SSL/TLS Grade F: ${domain.domain}",
+                message = "Critical vulnerability or SSL configuration issue detected."
+            )
         }
 
-        // Update notified days in DB (Simplified)
-        // In a real app, I'd update the entity back to DB here if notifiedDays changed.
+        // Active Threshold check: If current days left falls within configured threshold (e.g. <= 14 days)
+        val activeThreshold = reminderDays.filter { currentDaysLeft <= it }.minOrNull()
+        if (activeThreshold != null) {
+            val title = if (currentDaysLeft <= 7) {
+                "⚠️ Urgent SSL Renewal: ${domain.domain}"
+            } else {
+                "⚠️ Pending SSL Renewal: ${domain.domain}"
+            }
+            val msg = "Expires in $currentDaysLeft days (Threshold <= $activeThreshold days). Please renew certificate."
+
+            sendNotification(
+                id = domain.domain.hashCode() + currentDaysLeft,
+                title = title,
+                message = msg
+            )
+        }
     }
 
     private fun sendNotification(id: Int, title: String, message: String) {
@@ -114,7 +137,15 @@ class SslReminderWorker(
     }
 
     companion object {
-        fun schedule(context: Context) {
+        fun schedule(context: Context, forceReschedule: Boolean = false) {
+            SslReminderScheduler.scheduleExactAlarm(context)
+
+            val policy = if (forceReschedule) {
+                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE
+            } else {
+                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE
+            }
+
             val workRequest = PeriodicWorkRequestBuilder<SslReminderWorker>(1, TimeUnit.DAYS)
                 .setInitialDelay(calculateInitialDelay(context), TimeUnit.MILLISECONDS)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -122,7 +153,7 @@ class SslReminderWorker(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 "SslReminderWork",
-                ExistingPeriodicWorkPolicy.KEEP,
+                policy,
                 workRequest
             )
         }

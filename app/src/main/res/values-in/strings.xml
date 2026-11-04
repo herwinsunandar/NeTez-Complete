@@ -1,6 +1,12 @@
 <resources>
     <string name="app_name">NeTez</string>
 
+    <!-- Subscription Product IDs -->
+    <string name="product_id_pro_monthly">netez_pro_monthly</string>
+    <string name="product_id_pro_yearly">netez_pro_yearly</string>
+    <string name="sub_pro_monthly_title">NeTez PRO Bulanan</string>
+    <string name="sub_pro_yearly_title">NeTez PRO Tahunan</string>
+
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_diagnostic">Diagnostik</string>
@@ -11,7 +17,7 @@
     <string name="history_total">Total %1$d Laporan</string>
     <string name="history_clear_all">HAPUS SEMUA</string>
     <string name="history_empty">Belum ada laporan yang dibuat.</string>
-    <string name="dash_pass_prompt">Simpan password pertama kamu 🔒</string>
+    <string name="dash_pass_prompt">Password Manager</string>
 
     <!-- Dashboard -->
     <string name="dash_status">Ikhtisar Koneksi</string>
@@ -26,11 +32,36 @@
     <string name="set_appearance">Tampilan</string>
     <string name="set_theme">Mode Tema</string>
     <string name="set_theme_system">Default Sistem</string>
+    <string name="set_theme_dynamic">Tema Dinamis (Material You)</string>
     <string name="set_theme_light">Terang</string>
     <string name="set_theme_dark">Gelap</string>
     <string name="set_language">Bahasa</string>
     <string name="set_about">Tentang NeTez</string>
+    <string name="set_update_vendor">Update Vendor DB</string>
+    <string name="set_update_vendor_desc">Perbarui database MAC address (OUI) secara manual</string>
+    <string name="user_guide_title">Petunjuk Penggunaan &amp; Manual Fitur</string>
+    <string name="user_guide_subtitle">Panduan lengkap seluruh fitur jaringan &amp; keamanan</string>
     <string name="set_history_desc">Lihat semua log tes jaringan</string>
+
+    <!-- BleScanner Errors -->
+    <string name="ble_error_enable_bluetooth">Aktifkan Bluetooth untuk memindai</string>
+    <string name="ble_error_enable_location">Aktifkan Lokasi/GPS untuk memindai nama perangkat BLE</string>
+
+    <!-- Biometric Helper -->
+    <string name="auth_failed">Autentikasi gagal</string>
+
+    <!-- Phishing Check -->
+    <string name="phishing_privacy_note">🔒 Feed offline lokal diperiksa terlebih dahulu (privasi). Cek online hanya mengirim URL tanpa token ke Abuse.ch Swiss non-profit.</string>
+
+    <!-- ISP Comparison Pros/Cons -->
+    <string name="isp_indihome_pros">Cakupan sangat luas di seluruh Indonesia, Paket TV Kabel lengkap</string>
+    <string name="isp_indihome_cons">Upload tidak simetris, FUP ketat, Latensi internasional fluktuatif</string>
+    <string name="isp_biznet_pros">Kecepatan Simetris (1:1), Latensi gaming sangat rendah, Tanpa FUP</string>
+    <string name="isp_biznet_cons">Coverage belum merata, Harga router awal cukup tinggi</string>
+    <string name="isp_myrep_pros">Paket gaming dedicated, IP Public tersedia, Harga kompetitif</string>
+    <string name="isp_myrep_cons">Customer service slow response, Kabel sering maintenance</string>
+    <string name="isp_firstmedia_pros">Saluran TV kabel terbaik, Kualitas gambar HD jernih</string>
+    <string name="isp_firstmedia_cons">Kabel koaksial rentan noise, Biaya bulanan relatif tinggi</string>
 
     <!-- App Permission Scanner -->
     <string name="security_app_scanner_title">Pemindai Izin Aplikasi</string>
@@ -126,6 +157,8 @@
 
     <string name="wifi_audit_why_it_matters">Mengapa ini penting</string>
     <string name="wifi_audit_why_it_matters_desc">Parameter ini krusial untuk memastikan keamanan koneksi WiFi Anda dari potensi penyadapan atau akses tidak sah.</string>
+    <string name="security_intelligence_title">Security Intelligence</string>
+    <string name="security_intelligence_subtitle">Analisa keamanan domain, URL, dan email dalam satu tempat.</string>
     <string name="wifi_audit_rogue_ap">Rogue Access Point</string>
     <string name="wifi_audit_private_dns">Private DNS</string>
     <string name="wifi_audit_mac_privacy">Privasi MAC</string>
@@ -189,6 +222,10 @@
     <string name="btn_cancel">Batal</string>
     <string name="btn_add">Tambah</string>
     <string name="btn_save">Simpan</string>
+    <string name="btn_delete">Hapus</string>
+
+    <string name="ssl_delete_dialog_title">Hapus Domain Monitoring?</string>
+    <string name="ssl_delete_dialog_desc">Apakah Anda yakin ingin menghapus \"%1$s\" dari SSL/TLS Monitor? Pemantauan kedaluwarsa harian untuk domain ini akan dihentikan.</string>
     <string name="btn_close">Tutup</string>
     <string name="btn_ok">OK</string>
 
@@ -197,10 +234,44 @@
     <string name="set_bio_auth">Autentikasi Biometrik</string>
     <string name="set_bio_auth_desc">Gunakan Sidik Jari/Wajah untuk Password Manager</string>
     <string name="set_pin_title">Atur/Ubah PIN</string>
+    <string name="set_pin_field">6-digit PIN</string>
+    <string name="set_pin_verify_current">Masukkan PIN saat ini</string>
+    <string name="set_pin_enter_new">Masukkan 6-digit PIN baru</string>
+    <string name="set_pin_confirm_new">Konfirmasi PIN baru</string>
+    <string name="set_pin_mismatch">PIN tidak cocok</string>
+    <string name="set_pin_wrong_current">PIN saat ini salah</string>
+    <string name="set_pin_success">PIN berhasil diperbarui</string>
+    <string name="set_bio_not_available">Hardware biometrik tidak tersedia di perangkat ini</string>
+    <string name="pass_auth_title">Autentikasi Diperlukan</string>
+    <string name="pass_auth_subtitle">Silakan autentikasi untuk mengakses Password Manager</string>
     <string name="set_pin_not_set">Belum Diatur</string>
     <string name="set_pin_active">PIN Aktif</string>
     <string name="set_autolock">Kunci Otomatis 30s</string>
     <string name="set_autolock_desc">Kunci otomatis setelah 30 detik di latar belakang</string>
     <string name="set_clip_clear">Hapus Clipboard 30s</string>
     <string name="set_clip_clear_desc">Hapus otomatis password dari clipboard</string>
+    <string name="pass_delete_confirm_title">Hapus Password?</string>
+    <string name="pass_delete_confirm_desc">Apakah Anda yakin ingin menghapus password ini? Tindakan ini tidak dapat dibatalkan.</string>
+
+    <!-- Credential Vault -->
+    <string name="security_pass_manager_title">Brankas Kredensial</string>
+    <string name="security_pass_manager_desc">Kata sandi, server &amp; kredensial aman</string>
+    <string name="vault_title">Brankas Kredensial</string>
+    <string name="vault_subtitle">Kata sandi, server &amp; kredensial aman</string>
+    <string name="vault_security_info">Seluruh kata sandi, kunci SSH, dan kredensial Anda disimpan 100% secara lokal pada perangkat ini menggunakan enkripsi AES-256-GCM yang dilindungi Android Keystore. Kredensial tidak pernah dikirim ke luar perangkat.</string>
+    <string name="vault_search_hint">Cari kredensial...</string>
+    <string name="vault_add_title">Tambah Kredensial</string>
+    <string name="vault_edit_title">Edit Kredensial</string>
+    <string name="vault_type_website">Situs / Aplikasi</string>
+    <string name="vault_type_server">Kredensial Server</string>
+    <string name="vault_type_ssh">Kredensial SSH</string>
+    <string name="vault_type_sftp">Kredensial SFTP</string>
+    <string name="vault_type_api">Kredensial API</string>
+    <string name="vault_type_database">Kredensial Database</string>
+    <string name="vault_type_network">Perangkat Jaringan</string>
+    <string name="vault_type_notes">Catatan Rahasia</string>
+    <string name="vault_type_custom">Rahasia Kustom</string>
+    <string name="vault_btn_connect">HUBUNGKAN LEWAT NETEZ</string>
+    <string name="vault_btn_use_credential">GUNAKAN KREDENSIAL</string>
+    <string name="vault_import_private_key">Impor Private Key</string>
 </resources>

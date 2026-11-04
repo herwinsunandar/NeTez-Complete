@@ -25,7 +25,7 @@ interface ScannedDeviceDao {
     @Query("SELECT * FROM scanned_devices WHERE mac = :mac")
     suspend fun getDeviceByMac(mac: String): ScannedDevice?
 
-    @Query("SELECT * FROM scanned_devices")
+    @Query("SELECT * FROM scanned_devices ORDER BY lastSeen DESC")
     suspend fun getAllDevices(): List<ScannedDevice>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -33,4 +33,10 @@ interface ScannedDeviceDao {
 
     @Query("UPDATE scanned_devices SET lastSeen = :lastSeen, ip = :ip WHERE mac = :mac")
     suspend fun updateLastSeen(mac: String, ip: String, lastSeen: Long)
+
+    @Query("DELETE FROM scanned_devices WHERE mac = :mac")
+    suspend fun deleteDeviceByMac(mac: String)
+
+    @Query("DELETE FROM scanned_devices")
+    suspend fun clearAllDevices()
 }

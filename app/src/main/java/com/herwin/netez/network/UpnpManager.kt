@@ -2,8 +2,7 @@ package com.herwin.netez.network
 
 import android.content.Context
 import android.net.wifi.WifiManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.HttpURLConnection
@@ -15,23 +14,29 @@ data class UpnpDevice(
     val ip: String,
     val location: String,
     val server: String = "Unknown",
-    val searchTarget: String = "Unknown",
+    var searchTarget: String = "Unknown",
     val usn: String = "Unknown",
     var friendlyName: String = "UPnP Device",
     var modelName: String = "",
-    var manufacturer: String = ""
+    var modelNumber: String = "",
+    var manufacturer: String = "",
+    var deviceType: String = ""
 )
 
 object UpnpManager {
     private const val SSDP_MULTICAST_ADDRESS = "239.255.255.250"
     private const val SSDP_PORT = 1900
-    private const val WAIT_TIME_MS = 3000
+    private const val WAIT_TIME_MS = 1200
 
     suspend fun scan(context: Context): List<UpnpDevice> = withContext(Dispatchers.IO) {
         val devices = mutableMapOf<String, UpnpDevice>()
-        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val lock = wifi.createMulticastLock("UpnpScanLock")
-        lock.acquire()
+        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        val lock = try {
+            wifi?.createMulticastLock("UpnpScanLock")?.apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        } catch (_: Exception) { null }
         
         val socket = DatagramSocket()
         socket.soTimeout = WAIT_TIME_MS
@@ -41,7 +46,7 @@ object UpnpManager {
             query.append("M-SEARCH * HTTP/1.1\r\n")
             query.append("HOST: $SSDP_MULTICAST_ADDRESS:$SSDP_PORT\r\n")
             query.append("MAN: \"ssdp:discover\"\r\n")
-            query.append("MX: 3\r\n")
+            query.append("MX: 2\r\n")
             query.append("ST: ssdp:all\r\n")
             query.append("\r\n")
 
@@ -61,19 +66,27 @@ object UpnpManager {
                         devices[device.usn] = device
                     }
                 } catch (e: Exception) {
-                    // Timeout or other error
+                    // Timeout or end of packet
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
-            if (lock.isHeld) lock.release()
+            if (lock?.isHeld == true) {
+                try { lock.release() } catch (_: Exception) {}
+            }
             socket.close()
         }
 
         val resultList = devices.values.toList()
-        // Try to fetch friendly names
-        resultList.forEach { fetchDeviceDetails(it) }
+        // Concurrent XML detail fetching
+        coroutineScope {
+            resultList.map { device ->
+                async(Dispatchers.IO) {
+                    fetchDeviceDetails(device)
+                }
+            }.awaitAll()
+        }
         
         resultList
     }
@@ -116,12 +129,13 @@ object UpnpManager {
             conn.readTimeout = 2000
             val xml = conn.inputStream.bufferedReader().use { it.readText() }
             
-            // Simple XML parsing
+            // More robust XML parsing for UPnP
             device.friendlyName = extractXmlValue(xml, "friendlyName") ?: device.friendlyName
             device.modelName = extractXmlValue(xml, "modelName") ?: ""
+            device.modelNumber = extractXmlValue(xml, "modelNumber") ?: ""
             device.manufacturer = extractXmlValue(xml, "manufacturer") ?: ""
-        } catch (e: Exception) {
-            // Ignore fetch errors
+            device.deviceType = extractXmlValue(xml, "deviceType") ?: ""
+        } catch (_: Exception) {
         }
     }
 
@@ -130,8 +144,8 @@ object UpnpManager {
         val endTag = "</$tag>"
         val start = xml.indexOf(startTag)
         if (start == -1) return null
-        val end = xml.indexOf(endTag, start)
+        val end = xml.indexOf(endTag, start + startTag.length)
         if (end == -1) return null
-        return xml.substring(start + startTag.length, end)
+        return xml.substring(start + startTag.length, end).trim()
     }
 }

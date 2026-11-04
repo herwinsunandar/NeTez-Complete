@@ -17,7 +17,7 @@ import java.util.Date
 import java.util.Locale
 
 data class WhoisState(
-    val query: String = "8.8.8.8",
+    val query: String = "",
     val result: WhoisResult? = null,
     val isLoading: Boolean = false
 )
@@ -31,11 +31,15 @@ class WhoisViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchInfo() {
-        if (_uiState.value.query.isBlank()) return
-        
-        _uiState.value = _uiState.value.copy(isLoading = true, result = null)
+        val targetQuery = _uiState.value.query.trim().ifBlank { "8.8.8.8" }
+
+        _uiState.value = _uiState.value.copy(
+            isLoading = true,
+            result = null,
+            query = _uiState.value.query.ifBlank { targetQuery }
+        )
         viewModelScope.launch {
-            val result = WhoisManager.getInfo(_uiState.value.query)
+            val result = WhoisManager.getInfo(targetQuery)
             _uiState.value = _uiState.value.copy(isLoading = false, result = result)
         }
     }

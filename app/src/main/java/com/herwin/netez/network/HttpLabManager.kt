@@ -3,13 +3,11 @@ package com.herwin.netez.network
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
-import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 class HttpLabManager {
@@ -30,7 +28,7 @@ class HttpLabManager {
 
         val sslContext = SSLContext.getInstance("SSL")
         sslContext.init(null, trustAllCerts, SecureRandom())
-        
+
         return baseClient.newBuilder()
             .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
             .hostnameVerifier { _, _ -> true }
@@ -48,16 +46,22 @@ class HttpLabManager {
         val client = if (allowSelfSigned) getUnsafeOkHttpClient() else baseClient
 
         val requestBuilder = Request.Builder().url(url)
+
+        if (headers.keys.none { it.equals("User-Agent", ignoreCase = true) }) {
+            requestBuilder.addHeader("User-Agent", "NeTez-NetworkTools/7.0")
+        }
+
         headers.forEach { (k, v) -> requestBuilder.addHeader(k, v) }
 
-        val requestBody = body?.toRequestBody(contentType?.toMediaTypeOrNull())
+        val mediaType = (contentType ?: "application/json").toMediaTypeOrNull()
+        val requestBody = body?.toRequestBody(mediaType)
 
         when (method.uppercase()) {
             "GET" -> requestBuilder.get()
-            "POST" -> requestBuilder.post(requestBody ?: "".toRequestBody())
-            "PUT" -> requestBuilder.put(requestBody ?: "".toRequestBody())
-            "DELETE" -> requestBuilder.delete(requestBody)
-            "PATCH" -> requestBuilder.patch(requestBody ?: "".toRequestBody())
+            "POST" -> requestBuilder.post(requestBody ?: "".toRequestBody(mediaType))
+            "PUT" -> requestBuilder.put(requestBody ?: "".toRequestBody(mediaType))
+            "DELETE" -> if (requestBody != null) requestBuilder.delete(requestBody) else requestBuilder.delete()
+            "PATCH" -> requestBuilder.patch(requestBody ?: "".toRequestBody(mediaType))
         }
 
         return client.newCall(requestBuilder.build()).execute()

@@ -15,9 +15,9 @@ import java.util.Date
 import java.util.Locale
 
 data class IpCalculatorState(
-    val ip: String = "192.168.1.1",
+    val ip: String = "",
     val cidr: String = "24",
-    val fullInput: String = "192.168.1.1/24",
+    val fullInput: String = "",
     val result: SubnetInfo? = null
 )
 
@@ -44,13 +44,18 @@ class IpCalculatorViewModel(application: Application) : AndroidViewModel(applica
 
     fun updateCidr(newCidr: String) {
         val filtered = newCidr.filter { it.isDigit() }
-        _uiState.value = _uiState.value.copy(cidr = filtered, fullInput = "${_uiState.value.ip}/$filtered")
+        val currentIp = _uiState.value.ip.ifBlank { "192.168.1.1" }
+        _uiState.value = _uiState.value.copy(
+            cidr = filtered,
+            fullInput = if (_uiState.value.fullInput.isNotBlank()) "$currentIp/$filtered" else ""
+        )
         calculate()
     }
 
     private fun calculate() {
+        val inputIp = _uiState.value.ip.trim().ifBlank { "192.168.1.1" }
         val cidrInt = _uiState.value.cidr.toIntOrNull() ?: 24
-        val info = IpCalculator.calculate(_uiState.value.ip, cidrInt)
+        val info = IpCalculator.calculate(inputIp, cidrInt)
         _uiState.value = _uiState.value.copy(result = info)
     }
 

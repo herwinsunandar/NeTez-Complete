@@ -54,11 +54,14 @@ fun NeTezNavGraph(
                 onNavigateToWifiDetail = { bssid -> navController.navigate("wifi_detail/$bssid") },
                 onNavigateToCellularDetail = { navController.navigate(Screen.CellularDetail.route) },
                 onNavigateToPasswordManager = {
-                    authenticateForPasswordManager(activity, securityPrefs, navController)
+                    navController.navigate(Screen.PasswordManager.route)
                 },
                 onNavigateToSslReminder = { navController.navigate(Screen.SslReminder.route) },
                 onNavigateToSecurity = { navController.navigate(Screen.Security.route) },
-                onNavigateToSecurityPostureDetail = { navController.navigate(Screen.SecurityPostureDetail.route) }
+                onNavigateToSecurityPostureDetail = { navController.navigate(Screen.SecurityPostureDetail.route) },
+                onNavigateToSecurityIntelligence = { navController.navigate(Screen.SecurityIntelligence.route) },
+                onNavigateToEngTools = { navController.navigate(Screen.EngTools.route) },
+                onNavigateToSecurityToolsList = { navController.navigate(Screen.SecurityToolsList.route) }
             )
         }
         composable(Screen.SecurityPostureDetail.route) {
@@ -102,19 +105,34 @@ fun NeTezNavGraph(
         }
         composable(Screen.Security.route) {
             SecurityScreen(
+                onNavigateToSecurityIntelligence = { navController.navigate(Screen.SecurityIntelligence.route) },
                 onNavigateToLeakCheck = { navController.navigate(Screen.LeakCheck.route) },
                 onNavigateToDnsLeakTest = { navController.navigate(Screen.DnsLeakTest.route) },
                 onNavigateToPhishingCheck = { navController.navigate(Screen.PhishingCheck.route) },
                 onNavigateToPasswordStrength = { navController.navigate(Screen.PasswordStrength.route) },
                 onNavigateToPasswordManager = {
-                    authenticateForPasswordManager(activity, securityPrefs, navController)
+                    navController.navigate(Screen.PasswordManager.route)
                 },
                 onNavigateToBlacklist = { navController.navigate(Screen.BlacklistCheck.route) },
                 onNavigateToSslReminder = { navController.navigate(Screen.SslReminder.route) },
                 onNavigateToAppPermissionScanner = { navController.navigate(Screen.AppPermissionScanner.route) },
                 onNavigateToWifiSecurityAudit = { navController.navigate(Screen.WifiSecurityAudit.route) },
-                onNavigateToDeviceSecurityCheck = { navController.navigate(Screen.DeviceSecurityCheck.route) }
+                onNavigateToDeviceSecurityCheck = { navController.navigate(Screen.DeviceSecurityCheck.route) },
+                onNavigateToSecurityToolsList = { navController.navigate(Screen.SecurityToolsList.route) }
             )
+        }
+        composable(Screen.SecurityToolsList.route) {
+            SecurityToolsListScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToTool = { toolType -> navController.navigate("security_tool?toolType=$toolType") }
+            )
+        }
+        composable(
+            Screen.SecurityTool.route,
+            arguments = listOf(stringArgument("toolType"))
+        ) { entry ->
+            val toolType = entry.arguments?.getString("toolType") ?: "HASH_CALCULATOR"
+            SecurityToolScreen(toolType = toolType, onBack = { navController.popBackStack() })
         }
         composable(Screen.WifiSecurityAudit.route) {
             WifiSecurityScreen(
@@ -131,6 +149,12 @@ fun NeTezNavGraph(
         composable(Screen.AppPermissionScanner.route) {
             AppPermissionScannerScreen()
         }
+        composable(Screen.SecurityIntelligence.route) {
+            SecurityIntelligenceScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToUpgradeToPro = { navController.navigate(Screen.UpgradeToPro.route) }
+            )
+        }
         composable(Screen.LeakCheck.route) {
             LeakCheckScreen()
         }
@@ -141,7 +165,11 @@ fun NeTezNavGraph(
             SslReminderScreen(onBack = { navController.popBackStack() })
         }
         composable(Screen.PasswordManager.route) {
-            PasswordManagerScreen(onBack = { navController.popBackStack() })
+            CredentialVaultScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToSsh = { ip -> navController.navigate("ssh_client?ip=$ip") },
+                onNavigateToSftp = { navController.navigate(Screen.SftpClient.route) }
+            )
         }
         composable(Screen.Scanner.route) {
             ScannerScreen(
@@ -176,7 +204,20 @@ fun NeTezNavGraph(
             )
         }
         composable(Screen.Settings.route) {
-            SettingsScreen(onNavigateToHistory = { navController.navigate(Screen.History.route) })
+            SettingsScreen(
+                onNavigateToHistory = { navController.navigate(Screen.History.route) },
+                onNavigateToUserGuide = { navController.navigate(Screen.UserGuide.route) },
+                onNavigateToUpgradeToPro = { navController.navigate(Screen.UpgradeToPro.route) }
+            )
+        }
+        composable(Screen.UpgradeToPro.route) {
+            UpgradeToProScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Screen.UserGuide.route) {
+            UserGuideScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToRoute = { route -> navController.navigate(route) }
+            )
         }
         composable(Screen.PingTest.route, arguments = listOf(stringArgument("ip"))) { entry ->
             val ip = entry.arguments?.getString("ip") ?: ""
@@ -344,23 +385,4 @@ fun NeTezNavGraph(
 private fun stringArgument(name: String) = navArgument(name) {
     type = NavType.StringType
     defaultValue = ""
-}
-
-private fun authenticateForPasswordManager(
-    activity: FragmentActivity?,
-    securityPrefs: SecurityPreferences,
-    navController: NavHostController
-) {
-    if (activity != null) {
-        BiometricHelper.authenticate(
-            activity = activity,
-            title = "Buka Password Manager",
-            subtitle = "Verifikasi identitas",
-            onSuccess = {
-                securityPrefs.lastAuthTime = System.currentTimeMillis()
-                navController.navigate(Screen.PasswordManager.route)
-            },
-            onError = { }
-        )
-    }
 }

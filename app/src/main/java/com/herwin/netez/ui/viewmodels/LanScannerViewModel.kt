@@ -1,5 +1,11 @@
 package com.herwin.netez.ui.viewmodels
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureId
+
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -12,17 +18,21 @@ import com.herwin.netez.data.ScannedDevice
 import com.herwin.netez.data.TestResult
 import com.herwin.netez.data.VendorOverrideEntity
 import com.herwin.netez.data.wifi.VendorDatabase
+import com.herwin.netez.network.BleScannerManager
 import com.herwin.netez.network.Device
 import com.herwin.netez.network.LanScanner
 import com.herwin.netez.utils.NetworkUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,8 +44,25 @@ enum class ScanMode {
 }
 
 enum class LanFilter {
-    ALL, ONLINE, GATEWAY, PHONE, PC, ROUTER, IOT
+    ALL, ONLINE, GATEWAY, PHONE, PC, ROUTER, IOT, BLUETOOTH
 }
+
+enum class LanSortOption {
+    IP, LATENCY, VENDOR, NAME
+}
+
+data class NetworkSummaryInfo(
+    val gateway: String = "-",
+    val subnetMask: String = "255.255.255.0",
+    val dnsServer: String = "-",
+    val dhcpServer: String = "-",
+    val myIp: String = "-",
+    val myMac: String = "-",
+    val ssid: String = "-",
+    val bssid: String = "-",
+    val aliveCount: Int = 0,
+    val scannedCount: Int = 0
+)
 
 data class LanScannerState(
     val devices: List<Device> = emptyList(),
@@ -49,20 +76,33 @@ data class LanScannerState(
     val cidr: String = "192.168.1.0/24",
     val scanTimeMs: Long = 0,
     val filter: LanFilter = LanFilter.ALL,
+    val sortOption: LanSortOption = LanSortOption.IP,
     val mode: ScanMode = ScanMode.CIDR,
     val ispInfo: String? = null,
+    val networkSummary: NetworkSummaryInfo = NetworkSummaryInfo(),
     val vendorMap: Map<String, String> = emptyMap(),
-    val portScanningDevices: Set<String> = emptySet() // IPs currently scanning ports
+    val portScanningDevices: Set<String> = emptySet(),
+    val isApIsolationDetected: Boolean = false
 ) {
     val filteredDevices: List<Device>
-        get() = when (filter) {
-            LanFilter.ALL -> devices
-            LanFilter.ONLINE -> devices.filter { it.isOnline }
-            LanFilter.GATEWAY -> devices.filter { it.isGateway }
-            LanFilter.PHONE -> devices.filter { it.deviceType == "iPhone" || it.deviceType == "Android" }
-            LanFilter.PC -> devices.filter { it.deviceType == "PC" || it.deviceType == "Mac" }
-            LanFilter.ROUTER -> devices.filter { it.deviceType == "Router" }
-            LanFilter.IOT -> devices.filter { it.deviceType == "IoT" || it.deviceType == "Printer" || it.deviceType == "Smart TV" }
+        get() {
+            val filtered = when (filter) {
+                LanFilter.ALL -> devices
+                LanFilter.ONLINE -> devices.filter { it.isOnline }
+                LanFilter.GATEWAY -> devices.filter { it.isGateway }
+                LanFilter.PHONE -> devices.filter { it.deviceType == "iPhone" || it.deviceType == "Android" }
+                LanFilter.PC -> devices.filter { it.deviceType == "PC" || it.deviceType == "Mac" }
+                LanFilter.ROUTER -> devices.filter { it.deviceType == "Router" }
+                LanFilter.IOT -> devices.filter { it.deviceType == "IoT" || it.deviceType == "Printer" || it.deviceType == "Smart TV" }
+                LanFilter.BLUETOOTH -> devices.filter { it.isBluetoothNearby || it.bluetoothName != null }
+            }
+
+            return when (sortOption) {
+                LanSortOption.IP -> filtered.sortedBy { NetworkUtils.ipToLong(it.ip) }
+                LanSortOption.LATENCY -> filtered.sortedWith(compareBy<Device> { !it.isOnline }.thenBy { it.latencyMs })
+                LanSortOption.VENDOR -> filtered.sortedBy { it.vendor.lowercase() }
+                LanSortOption.NAME -> filtered.sortedBy { it.hostname.lowercase() }
+            }
         }
 }
 
@@ -72,7 +112,10 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
     private val db = AppDatabase.getDatabase(application)
     private val testDao = db.testResultDao()
     private val deviceDao = db.scannedDeviceDao()
+    private val bleScannerManager = BleScannerManager(application)
     private var scanJob: Job? = null
+
+    var showGlobalSupportDialog by mutableStateOf(false)
 
     companion object {
         const val TCP_PING_ENABLED = true
@@ -82,8 +125,17 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     init {
+        val subnetInfo = NetworkUtils.getSubnetInfo(application)
         val ip = NetworkUtils.getLocalIpAddress()
-        if (ip != null) {
+        if (subnetInfo != null) {
+            _uiState.value = _uiState.value.copy(
+                subnet = subnetInfo.networkAddress.substringBeforeLast("."),
+                cidr = "${subnetInfo.networkAddress}/${subnetInfo.prefixLength}",
+                rangeStart = subnetInfo.startIp,
+                rangeEnd = subnetInfo.endIp,
+                singleIp = ip ?: subnetInfo.ip
+            )
+        } else if (ip != null) {
             val parts = ip.split(".")
             if (parts.size == 4) {
                 val subnet = "${parts[0]}.${parts[1]}.${parts[2]}"
@@ -96,6 +148,9 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
                 )
             }
         }
+
+        loadCachedHistory()
+        updateNetworkSummary()
 
         viewModelScope.launch {
             VendorDatabase.vendorUpdates.collectLatest { mac ->
@@ -110,6 +165,116 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
                 }
             }
         }
+    }
+
+    private fun loadCachedHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val allHistory = deviceDao.getAllDevices()
+            if (allHistory.isNotEmpty()) {
+                val cachedDevices = allHistory.map { dbDev ->
+                    Device(
+                        ip = dbDev.ip,
+                        hostname = dbDev.hostname,
+                        mac = dbDev.mac,
+                        vendor = dbDev.vendor,
+                        deviceCategory = dbDev.deviceCategory,
+                        deviceType = dbDev.deviceType,
+                        os = dbDev.os,
+                        isOnline = false,
+                        lastSeen = dbDev.lastSeen,
+                        firstSeen = dbDev.firstSeen
+                    )
+                }.sortedBy { NetworkUtils.ipToLong(it.ip) }
+
+                if (_uiState.value.devices.isEmpty()) {
+                    _uiState.update { it.copy(devices = cachedDevices) }
+                }
+            }
+        }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            deviceDao.clearAllDevices()
+            _uiState.update { it.copy(devices = emptyList()) }
+        }
+    }
+
+    fun deleteDevice(mac: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            deviceDao.deleteDeviceByMac(mac)
+            _uiState.update { state ->
+                state.copy(devices = state.devices.filter { it.mac != mac })
+            }
+            updateNetworkSummary()
+        }
+    }
+
+    fun updateSortOption(sortOption: LanSortOption) {
+        _uiState.update { it.copy(sortOption = sortOption) }
+    }
+
+    fun updateNetworkSummary() {
+        val context = getApplication<Application>()
+        val subnetInfo = NetworkUtils.getSubnetInfo(context)
+        val gateway = NetworkUtils.getGateway(context)
+        val wifiDetails = NetworkUtils.getWifiDetails(context)
+        val myIp = NetworkUtils.getLocalIpAddress() ?: "-"
+        val myMac = NetworkUtils.getMacAddress() ?: "-"
+
+        _uiState.update { state ->
+            state.copy(
+                networkSummary = NetworkSummaryInfo(
+                    gateway = if (gateway.isNotEmpty()) gateway else "-",
+                    subnetMask = subnetInfo?.netmask ?: "255.255.255.0",
+                    dnsServer = if (gateway.isNotEmpty()) gateway else "1.1.1.1",
+                    dhcpServer = if (gateway.isNotEmpty()) gateway else "-",
+                    myIp = myIp,
+                    myMac = myMac,
+                    ssid = wifiDetails["SSID"] ?: "WiFi Network",
+                    bssid = wifiDetails["BSSID"] ?: "-",
+                    aliveCount = state.devices.count { it.isOnline },
+                    scannedCount = if (state.devices.isNotEmpty()) state.devices.size else 254
+                )
+            )
+        }
+    }
+
+    fun exportCsv(context: Context) {
+        val state = _uiState.value
+        val sb = StringBuilder("IP,Hostname,MAC,Vendor,DeviceType,OS,Status,LatencyMs,OpenPorts\n")
+        state.devices.forEach { dev ->
+            sb.append("\"${dev.ip}\",\"${dev.hostname}\",\"${dev.mac}\",\"${dev.vendor}\",\"${dev.deviceType}\",\"${dev.os}\",\"${if (dev.isOnline) "Online" else "Offline"}\",${dev.latencyMs},\"${dev.openPorts.joinToString(";")}\"\n")
+        }
+        shareExportText(context, sb.toString(), "text/csv")
+    }
+
+    fun exportJson(context: Context) {
+        val state = _uiState.value
+        val jsonArray = JSONArray()
+        state.devices.forEach { dev ->
+            val obj = JSONObject()
+            obj.put("ip", dev.ip)
+            obj.put("hostname", dev.hostname)
+            obj.put("mac", dev.mac)
+            obj.put("vendor", dev.vendor)
+            obj.put("deviceType", dev.deviceType)
+            obj.put("os", dev.os)
+            obj.put("isOnline", dev.isOnline)
+            obj.put("latencyMs", dev.latencyMs)
+            obj.put("openPorts", JSONArray(dev.openPorts))
+            jsonArray.put(obj)
+        }
+        shareExportText(context, jsonArray.toString(2), "text/plain")
+    }
+
+    private fun shareExportText(context: Context, content: String, mimeType: String) {
+        val intent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, content)
+            type = mimeType
+        }
+        context.startActivity(Intent.createChooser(intent, "Export LAN Scan Report"))
     }
 
     fun updateMode(mode: ScanMode) { _uiState.value = _uiState.value.copy(mode = mode) }
@@ -129,6 +294,18 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
 
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
+            // Check connection type
+            val connectionType = NetworkUtils.getConnectionType(context)
+            if (connectionType == "Cellular") {
+                _uiState.update { it.copy(
+                    isScanning = false, 
+                    progressText = "LAN Scan not supported on Cellular network",
+                    progress = 0f,
+                    devices = emptyList()
+                ) }
+                return@launch
+            }
+
             // Ensure Vendor Database is loaded
             VendorDatabase.load(context)
 
@@ -215,9 +392,18 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
             }
             
             val finalDevices = _uiState.value.devices
-            _uiState.update { it.copy(isScanning = false, progress = 1f) }
+            val onlineCount = finalDevices.count { it.isOnline }
+            val isApIsolation = (onlineCount <= 2 && finalDevices.size >= 10)
+            _uiState.update { it.copy(isScanning = false, progress = 1f, isApIsolationDetected = isApIsolation) }
             
             saveToHistory(finalDevices.size, time)
+            correlateBluetoothProximity()
+            updateNetworkSummary()
+
+            val accessManager = FeatureAccessManager.getInstance(getApplication())
+            if (accessManager.trackAndCheckGlobalToolUsage()) {
+                showGlobalSupportDialog = true
+            }
             
             // Background persistence
             viewModelScope.launch(Dispatchers.IO) {
@@ -262,6 +448,69 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.value = _uiState.value.copy(isScanning = false, progress = 0f)
     }
 
+    fun correlateBluetoothProximity() {
+        viewModelScope.launch {
+            try {
+                bleScannerManager.startScan()
+                delay(2500)
+                bleScannerManager.stopScan()
+
+                val bleDevices = bleScannerManager.foundDevices.value
+                if (bleDevices.isNotEmpty()) {
+                    _uiState.update { state ->
+                        val updated = state.devices.map { lanDev ->
+                            val matchedBle = bleDevices.firstOrNull { ble ->
+                                val bleName = ble.name.trim()
+                                val lanHost = lanDev.hostname.trim()
+                                val netbios = lanDev.netbiosName?.trim() ?: ""
+
+                                (bleName.isNotBlank() && bleName != "Unknown Device" && (
+                                    lanHost.contains(bleName, ignoreCase = true) ||
+                                    bleName.contains(lanHost, ignoreCase = true) ||
+                                    (netbios.isNotBlank() && netbios.contains(bleName, ignoreCase = true))
+                                )) ||
+                                (lanDev.vendor != "Unknown" && ble.vendor != "Unknown" && 
+                                 lanDev.vendor.contains(ble.vendor, ignoreCase = true))
+                            }
+
+                            if (matchedBle != null) {
+                                lanDev.copy(
+                                    bluetoothName = matchedBle.name,
+                                    bluetoothMac = matchedBle.mac,
+                                    bluetoothRssi = matchedBle.rssi,
+                                    bluetoothDeviceType = matchedBle.deviceType.name,
+                                    isBluetoothNearby = true
+                                )
+                            } else {
+                                lanDev
+                            }
+                        }
+                        state.copy(devices = updated)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun manuallyLinkBluetooth(deviceIp: String, bleName: String, bleMac: String, rssi: Int, deviceType: String) {
+        _uiState.update { state ->
+            val updated = state.devices.map { 
+                if (it.ip == deviceIp) {
+                    it.copy(
+                        bluetoothName = bleName,
+                        bluetoothMac = bleMac,
+                        bluetoothRssi = rssi,
+                        bluetoothDeviceType = deviceType,
+                        isBluetoothNearby = true
+                    )
+                } else it
+            }
+            state.copy(devices = updated)
+        }
+    }
+
     fun togglePortScan(deviceIp: String) {
         if (_uiState.value.portScanningDevices.contains(deviceIp)) return
 
@@ -281,28 +530,34 @@ class LanScannerViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun saveVendorOverride(mac: String, vendor: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            db.vendorOverrideDao().insertOverride(VendorOverrideEntity(mac, vendor))
-            // Refresh current list if possible
-            _uiState.update { state ->
-                state.copy(devices = state.devices.map { 
-                    if (it.mac == mac) it.copy(vendor = vendor) else it 
-                })
-            }
-        }
+    fun saveVendorOverride(ip: String, mac: String, vendor: String) {
+        val cleanMac = mac.uppercase().replace("-", ":")
+        val effectiveKey = if (cleanMac != "00:00:00:00:00:00" && cleanMac.isNotBlank()) cleanMac else ip
 
-        viewModelScope.launch {
-            VendorDatabase.vendorUpdates.collectLatest { mac ->
-                val vendor = VendorDatabase.getVendorSync(mac)
-                _uiState.update { state ->
-                    val newDevices = state.devices.map { 
-                        if (it.mac == mac) it.copy(vendor = vendor) else it 
-                    }
-                    val newMap = state.vendorMap.toMutableMap()
-                    newMap[mac] = vendor
-                    state.copy(devices = newDevices, vendorMap = newMap)
+        viewModelScope.launch(Dispatchers.IO) {
+            db.vendorOverrideDao().insertOverride(VendorOverrideEntity(effectiveKey, vendor))
+            VendorDatabase.setCustomOverride(effectiveKey, vendor)
+            if (cleanMac.isNotBlank() && cleanMac != "00:00:00:00:00:00") {
+                VendorDatabase.setCustomOverride(cleanMac, vendor)
+            }
+
+            val dbDev = if (cleanMac.isNotBlank() && cleanMac != "00:00:00:00:00:00") {
+                deviceDao.getDeviceByMac(cleanMac)
+            } else null
+            if (dbDev != null) {
+                deviceDao.insertDevice(dbDev.copy(vendor = vendor))
+            }
+
+            _uiState.update { state ->
+                val newDevices = state.devices.map { 
+                    if ((cleanMac != "00:00:00:00:00:00" && it.mac.equals(cleanMac, ignoreCase = true)) || it.ip == ip) {
+                        it.copy(vendor = vendor)
+                    } else it 
                 }
+                val newMap = state.vendorMap.toMutableMap()
+                newMap[effectiveKey] = vendor
+                if (cleanMac.isNotBlank()) newMap[cleanMac] = vendor
+                state.copy(devices = newDevices, vendorMap = newMap)
             }
         }
     }

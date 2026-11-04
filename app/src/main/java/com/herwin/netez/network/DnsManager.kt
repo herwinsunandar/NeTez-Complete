@@ -1,6 +1,9 @@
 package com.herwin.netez.network
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -64,7 +67,6 @@ object DnsManager {
             val url = if (server.apiUrl != null) {
                 "${server.apiUrl}?name=$domain&type=${type.name}"
             } else {
-                // Fallback to Cloudflare if no API URL (Local ISP logic usually needs JNDI or native calls which are complex in Android)
                 "https://cloudflare-dns.com/dns-query?name=$domain&type=${type.name}"
             }
 
@@ -111,9 +113,41 @@ object DnsManager {
         }
     }
 
+    suspend fun lookupAllRecords(
+        domain: String,
+        server: DnsServer = PublicDnsServers[0]
+    ): Map<DnsRecordType, DnsResponse> = withContext(Dispatchers.IO) {
+        val types = DnsRecordType.entries
+        val results = mutableMapOf<DnsRecordType, DnsResponse>()
+        coroutineScope {
+            val jobs = types.map { recordType ->
+                async {
+                    recordType to lookup(domain, recordType, server)
+                }
+            }
+            jobs.awaitAll().forEach { (type, response) ->
+                results[type] = response
+            }
+        }
+
+        // PTR Reverse Lookup Fallback for Domains: If PTR is empty, lookup PTR using the resolved A record IP
+        val ptrResponse = results[DnsRecordType.PTR]
+        val aResponse = results[DnsRecordType.A]
+        if ((ptrResponse == null || ptrResponse.records.isEmpty()) && aResponse != null && aResponse.records.isNotEmpty()) {
+            val resolvedIp = aResponse.records.firstOrNull { it.type == 1 }?.data
+            if (!resolvedIp.isNullOrBlank()) {
+                val ipPtrResponse = lookup(resolvedIp, DnsRecordType.PTR, server)
+                if (ipPtrResponse.records.isNotEmpty()) {
+                    results[DnsRecordType.PTR] = ipPtrResponse
+                }
+            }
+        }
+
+        results
+    }
+
     private fun fetchGeoInfo(record: DnsRecord) {
         try {
-            // Basic check if data is IP
             if (!record.data.contains(".") && !record.data.contains(":")) return
             
             val geoUrl = "http://ip-api.com/json/${record.data}"

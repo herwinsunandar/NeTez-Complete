@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,46 +19,77 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.herwin.netez.R
 import com.herwin.netez.data.SecurityPreferences
+import com.herwin.netez.data.wifi.VendorDatabase
 import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.SettingsViewModel
 import com.herwin.netez.ui.viewmodels.StabilityTestViewModel
 import com.herwin.netez.worker.OUIUpdateWorker
+import com.herwin.netez.workers.SslReminderScheduler
 import com.herwin.netez.workers.SslReminderWorker
 import com.herwin.netez.workers.UrlHausFeedWorker
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
+
+import com.herwin.netez.entitlement.SubscriptionManager
+import com.herwin.netez.entitlement.UserTier
 
 @Composable
 fun SettingsScreen(
     onNavigateToHistory: () -> Unit,
+    onNavigateToUserGuide: () -> Unit = {},
+    onNavigateToUpgradeToPro: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val subManager = remember { SubscriptionManager.getInstance(context) }
+    val userTier by subManager.userTier.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val language by viewModel.language.collectAsState()
     val abuseIpDbKey by viewModel.abuseIpDbKey.collectAsState()
     val shodanKey by viewModel.shodanKey.collectAsState()
-    val context = LocalContext.current
     val securityPrefs = remember { SecurityPreferences(context) }
-    val updateStartedMsg = stringResource(R.string.set_vendor_update_started)
     
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showLegalRevokeDialog by remember { mutableStateOf(false) }
     var showApiKeyDialog by remember { mutableStateOf(false) }
     var selectedApiKeyType by remember { mutableStateOf("") } // "AbuseIPDB" or "Shodan"
-    var showPinDialog by remember { mutableStateOf(false) }
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var showReminderDaysDialog by remember { mutableStateOf(false) }
+    var sslCheckTimeDisplay by remember { mutableStateOf(securityPrefs.sslCheckTime) }
+    var defaultReminderDaysDisplay by remember { mutableStateOf(securityPrefs.defaultReminderDays) }
+
+    var lastOuiUpdate by remember { mutableLongStateOf(VendorDatabase.getLastUpdateTimestamp(context)) }
+    var ouiRecordCount by remember { mutableIntStateOf(VendorDatabase.getCacheRecordCount(context)) }
+    var isOuiUpdating by remember { mutableStateOf(false) }
+
+    val sdfOui = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    val ouiSubtitle = when {
+        isOuiUpdating -> "Updating Vendor OUI database..."
+        lastOuiUpdate > 0 -> "Last updated: ${sdfOui.format(Date(lastOuiUpdate))} ($ouiRecordCount records)"
+        else -> stringResource(R.string.set_update_vendor_desc)
+    }
+
+    LaunchedEffect(isOuiUpdating) {
+        if (isOuiUpdating) {
+            delay(4000)
+            lastOuiUpdate = VendorDatabase.getLastUpdateTimestamp(context)
+            ouiRecordCount = VendorDatabase.getCacheRecordCount(context)
+            isOuiUpdating = false
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
@@ -68,36 +98,6 @@ fun SettingsScreen(
     ) {
         item {
             SettingsCategory(stringResource(R.string.set_security)) {
-                var bioEnabled by remember { mutableStateOf(securityPrefs.isBiometricEnabled) }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.set_bio_auth), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text(stringResource(R.string.set_bio_auth_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(
-                        checked = bioEnabled,
-                        onCheckedChange = {
-                            bioEnabled = it
-                            securityPrefs.isBiometricEnabled = it
-                        },
-                        modifier = Modifier.scale(0.8f)
-                    )
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-
-                SettingsItem(
-                    title = stringResource(R.string.set_pin_title),
-                    subtitle = if (securityPrefs.pin == null) stringResource(R.string.set_pin_not_set) else stringResource(R.string.set_pin_active),
-                    icon = AppIcons.lock(),
-                    onClick = { showPinDialog = true }
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-
                 var autoLock by remember { mutableStateOf(securityPrefs.autoLockDelay == 30000L) }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -228,6 +228,9 @@ fun SettingsScreen(
                         onCheckedChange = {
                             sslEnabled = it
                             securityPrefs.isSslReminderEnabled = it
+                            if (it) {
+                                SslReminderWorker.schedule(context, forceReschedule = true)
+                            }
                         },
                         modifier = Modifier.scale(0.8f)
                     )
@@ -237,7 +240,7 @@ fun SettingsScreen(
 
                 SettingsItem(
                     title = "Check Time",
-                    subtitle = securityPrefs.sslCheckTime,
+                    subtitle = sslCheckTimeDisplay,
                     icon = AppIcons.timer(),
                     onClick = { showTimePickerDialog = true }
                 )
@@ -246,9 +249,16 @@ fun SettingsScreen(
 
                 SettingsItem(
                     title = "Reminder Days",
-                    subtitle = securityPrefs.defaultReminderDays,
+                    subtitle = defaultReminderDaysDisplay,
                     icon = AppIcons.event(),
                     onClick = { showReminderDaysDialog = true }
+                )
+
+                Text(
+                    text = "Tip: On Xiaomi/Oppo/Vivo devices, enable Autostart & set Battery Saver to 'No Restrictions' for background alerts.",
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall
                 )
             }
         }
@@ -256,12 +266,17 @@ fun SettingsScreen(
             SettingsCategory(stringResource(R.string.set_database)) {
                 SettingsItem(
                     title = stringResource(R.string.set_update_vendor),
-                    subtitle = stringResource(R.string.set_update_vendor_desc),
-                    icon = AppIcons.palette(),
+                    subtitle = ouiSubtitle,
+                    icon = AppIcons.refresh(),
                     onClick = {
                         val request = OneTimeWorkRequestBuilder<OUIUpdateWorker>().build()
-                        WorkManager.getInstance(context).enqueue(request)
-                        Toast.makeText(context, updateStartedMsg, Toast.LENGTH_SHORT).show()
+                        WorkManager.getInstance(context).enqueueUniqueWork(
+                            "OUIUpdateOneTime",
+                            ExistingWorkPolicy.REPLACE,
+                            request
+                        )
+                        isOuiUpdating = true
+                        Toast.makeText(context, "Updating Vendor DB in background...", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -283,7 +298,7 @@ fun SettingsScreen(
                 SettingsItem(
                     title = stringResource(R.string.set_theme),
                     subtitle = when(themeMode) {
-                        "light" -> stringResource(R.string.set_theme_light)
+                        "dynamic", "light" -> stringResource(R.string.set_theme_dynamic)
                         "dark" -> stringResource(R.string.set_theme_dark)
                         else -> stringResource(R.string.set_theme_system)
                     },
@@ -304,7 +319,24 @@ fun SettingsScreen(
         }
 
         item {
+            SettingsCategory("Subscription") {
+                SettingsItem(
+                    title = if (userTier == UserTier.PRO) "NeTez PRO" else "NeTez FREE",
+                    subtitle = if (userTier == UserTier.PRO) "Active Membership · All Limits Unlocked" else "Tap to Upgrade to PRO & Unlock Limits",
+                    icon = AppIcons.star(),
+                    onClick = onNavigateToUpgradeToPro
+                )
+            }
+        }
+
+        item {
             SettingsCategory(stringResource(R.string.set_about)) {
+                SettingsItem(
+                    title = stringResource(R.string.user_guide_title),
+                    subtitle = stringResource(R.string.user_guide_subtitle),
+                    icon = AppIcons.description(),
+                    onClick = onNavigateToUserGuide
+                )
                 SettingsItem(
                     title = stringResource(R.string.set_legal_notice),
                     subtitle = stringResource(R.string.set_legal_notice_desc),
@@ -338,58 +370,11 @@ fun SettingsScreen(
             text = {
                 Column {
                     ThemeOption(stringResource(R.string.set_theme_system), "system", themeMode) { viewModel.setThemeMode(it); showThemeDialog = false }
-                    ThemeOption(stringResource(R.string.set_theme_light), "light", themeMode) { viewModel.setThemeMode(it); showThemeDialog = false }
+                    ThemeOption(stringResource(R.string.set_theme_dynamic), "dynamic", themeMode) { viewModel.setThemeMode(it); showThemeDialog = false }
                     ThemeOption(stringResource(R.string.set_theme_dark), "dark", themeMode) { viewModel.setThemeMode(it); showThemeDialog = false }
                 }
             },
             confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text(stringResource(R.string.btn_cancel)) } }
-        )
-    }
-
-    if (showPinDialog) {
-        var tempPin by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showPinDialog = false },
-            containerColor = SoftDarkBg,
-            title = { Text(stringResource(R.string.set_pin_dialog_title), color = Color.White) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.set_pin_dialog_desc), color = TextGray, fontSize = 12.sp)
-                    Spacer(Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = tempPin,
-                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) tempPin = it },
-                        label = { Text(stringResource(R.string.set_pin_field)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color(0xFF6C8CFF),
-                            unfocusedBorderColor = TextGray
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        securityPrefs.pin = tempPin
-                        showPinDialog = false
-                    },
-                    enabled = tempPin.length == 6,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))
-                ) {
-                    Text(stringResource(R.string.btn_save))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPinDialog = false }) {
-                    Text(stringResource(R.string.btn_cancel), color = Color.White)
-                }
-            }
         )
     }
 
@@ -427,9 +412,11 @@ fun SettingsScreen(
                 Button(onClick = {
                     val time = String.format(Locale.US, "%02d:%02d", hour, minute)
                     securityPrefs.sslCheckTime = time
-                    SslReminderWorker.schedule(context) // Reschedule with new time
+                    sslCheckTimeDisplay = time
+                    SslReminderScheduler.scheduleExactAlarm(context)
+                    SslReminderWorker.schedule(context, forceReschedule = true)
                     showTimePickerDialog = false
-                }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))) {
+                }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
                     Text(stringResource(R.string.btn_save))
                 }
             },
@@ -468,6 +455,7 @@ fun SettingsScreen(
             confirmButton = {
                 Button(onClick = {
                     securityPrefs.defaultReminderDays = daysText
+                    defaultReminderDaysDisplay = daysText
                     showReminderDaysDialog = false
                 }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF))) {
                     Text(stringResource(R.string.btn_save))
@@ -567,11 +555,12 @@ fun SettingsScreen(
 
 @Composable
 fun ThemeOption(label: String, value: String, current: String, onClick: (String) -> Unit) {
+    val selected = current == value || (value == "dynamic" && current == "light")
     Row(
         modifier = Modifier.fillMaxWidth().clickable { onClick(value) }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = current == value, onClick = { onClick(value) })
+        RadioButton(selected = selected, onClick = { onClick(value) })
         Spacer(Modifier.width(8.dp))
         Text(label)
     }

@@ -23,11 +23,10 @@ data class VendorData(
 
 object VendorDatabase {
     private val ouiMap = ConcurrentHashMap<String, VendorData>()
+    private val overrideMap = ConcurrentHashMap<String, VendorData>()
     private val pendingFetches = ConcurrentHashMap.newKeySet<String>()
     private var isInitialized = false
     
-    // Using a simple property with a getter instead of 'by lazy' to ensure thread-safety
-    // and provide better error handling for TLS initialization failures.
     private var _client: OkHttpClient? = null
     
     private val _vendorUpdates = MutableSharedFlow<String>()
@@ -53,39 +52,119 @@ object VendorDatabase {
     }
 
     suspend fun load(context: Context) = withContext(Dispatchers.IO) {
-        if (isInitialized) return@withContext
-        
-        ouiMap["A0:E1:6D"] = VendorData("ZTE FiberHome", "Infrastructure", "Router")
-        ouiMap["10:08:1D"] = VendorData("ZTE FiberHome", "Infrastructure", "Router")
-        ouiMap["FC:C8:97"] = VendorData("ZTE FiberHome", "Infrastructure", "Router")
-        ouiMap["D8:47:32"] = VendorData("ZTE", "Infrastructure", "Router")
-        ouiMap["00:22:93"] = VendorData("ZTE", "Infrastructure", "Router")
-        ouiMap["B4:A9:4F"] = VendorData("ZTE", "Infrastructure", "Router")
-        ouiMap["BC:9B:68"] = VendorData("TP-Link", "Infrastructure", "Router")
-        ouiMap["8C:FD:F0"] = VendorData("TP-Link", "Infrastructure", "Router")
-        ouiMap["50:5B:1D"] = VendorData("Mercusys (TP-Link)", "Infrastructure", "Router")
-        ouiMap["D8:0D:17"] = VendorData("TP-Link", "Infrastructure", "Router")
-        ouiMap["E8:4E:06"] = VendorData("Huawei", "Infrastructure", "Router")
-        ouiMap["00:1D:7E"] = VendorData("Huawei", "Infrastructure", "Router")
-        ouiMap["24:DF:6A"] = VendorData("Huawei", "Infrastructure", "Router")
-        ouiMap["CC:CC:81"] = VendorData("Huawei", "Infrastructure", "Router")
-        ouiMap["A4:4B:D5"] = VendorData("Huawei", "Infrastructure", "Router")
-        ouiMap["28:6F:B9"] = VendorData("Nokia Shanghai Bell", "Infrastructure", "Router")
-        ouiMap["C4:CD:50"] = VendorData("Tenda", "Infrastructure", "Router")
-        ouiMap["D0:14:71"] = VendorData("Tenda", "Infrastructure", "Router")
-        ouiMap["00:9E:6B"] = VendorData("Xiaomi", "Mobile", "Phone")
-        ouiMap["18:59:36"] = VendorData("Xiaomi", "Mobile", "Phone")
-        ouiMap["F4:8E:92"] = VendorData("Xiaomi", "Mobile", "Phone")
-        ouiMap["28:D2:44"] = VendorData("Xiaomi", "Mobile", "Phone")
-        ouiMap["D0:C5:F3"] = VendorData("Apple", "Mobile", "Phone")
-        ouiMap["00:03:93"] = VendorData("Apple", "Mobile", "Phone")
-        ouiMap["20:34:FB"] = VendorData("Samsung", "Mobile", "Phone")
-        ouiMap["00:00:F0"] = VendorData("Samsung", "Mobile", "Phone")
+        if (!isInitialized) {
+            // Comprehensive OUI Map for popular vendors in ID/SEA
+            // ZTE / FiberHome
+            ouiMap["A0:E1:6D"] = VendorData("ZTE FiberHome", "Infrastructure", "Router")
+            ouiMap["10:08:1D"] = VendorData("ZTE FiberHome", "Infrastructure", "Router")
+            ouiMap["FC:C8:97"] = VendorData("ZTE FiberHome", "Infrastructure", "Router")
+            ouiMap["D8:47:32"] = VendorData("ZTE", "Infrastructure", "Router")
+            ouiMap["00:22:93"] = VendorData("ZTE", "Infrastructure", "Router")
+            ouiMap["B4:A9:4F"] = VendorData("ZTE", "Infrastructure", "Router")
+            ouiMap["34:4B:50"] = VendorData("ZTE", "Infrastructure", "Router")
+            ouiMap["E0:18:77"] = VendorData("ZTE", "Infrastructure", "Router")
+            ouiMap["2C:26:C5"] = VendorData("ZTE", "Infrastructure", "Router")
+            
+            // Huawei
+            ouiMap["E8:4E:06"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["00:1D:7E"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["24:DF:6A"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["CC:CC:81"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["A4:4B:D5"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["BC:76:70"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["4C:B1:6C"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["28:5F:DB"] = VendorData("Huawei", "Infrastructure", "Router")
+            ouiMap["AC:85:3D"] = VendorData("Huawei", "Infrastructure", "Router")
 
-        loadFromAssets(context)
-        loadFromCache(context)
+            // TP-Link / Mercusys
+            ouiMap["BC:9B:68"] = VendorData("TP-Link", "Infrastructure", "Router")
+            ouiMap["8C:FD:F0"] = VendorData("TP-Link", "Infrastructure", "Router")
+            ouiMap["50:5B:1D"] = VendorData("Mercusys (TP-Link)", "Infrastructure", "Router")
+            ouiMap["D8:0D:17"] = VendorData("TP-Link", "Infrastructure", "Router")
+            ouiMap["60:E3:27"] = VendorData("TP-Link", "Infrastructure", "Router")
+            ouiMap["00:0A:EB"] = VendorData("TP-Link", "Infrastructure", "Router")
+            ouiMap["98:DE:D0"] = VendorData("TP-Link", "Infrastructure", "Router")
 
-        isInitialized = true
+            // D-Link
+            ouiMap["00:0F:3D"] = VendorData("D-Link", "Infrastructure", "Router")
+            ouiMap["00:12:17"] = VendorData("D-Link", "Infrastructure", "Router")
+            ouiMap["1C:7E:E5"] = VendorData("D-Link", "Infrastructure", "Router")
+
+            // ASUS / Tenda
+            ouiMap["C4:CD:50"] = VendorData("Tenda", "Infrastructure", "Router")
+            ouiMap["D0:14:71"] = VendorData("Tenda", "Infrastructure", "Router")
+            ouiMap["AC:92:32"] = VendorData("ASUS", "Infrastructure", "Router")
+            ouiMap["BC:EE:7B"] = VendorData("ASUS", "Infrastructure", "Router")
+
+            // Apple
+            ouiMap["D0:C5:F3"] = VendorData("Apple", "Mobile", "Phone")
+            ouiMap["00:03:93"] = VendorData("Apple", "Mobile", "Phone")
+            ouiMap["28:CF:E9"] = VendorData("Apple", "Mobile", "Phone")
+            ouiMap["F0:99:B6"] = VendorData("Apple", "Mobile", "Phone")
+            ouiMap["F4:0F:24"] = VendorData("Apple", "Mobile", "Phone")
+
+            // Samsung
+            ouiMap["20:34:FB"] = VendorData("Samsung", "Mobile", "Phone")
+            ouiMap["00:00:F0"] = VendorData("Samsung", "Mobile", "Phone")
+            ouiMap["AC:5A:14"] = VendorData("Samsung", "Mobile", "Phone")
+            ouiMap["24:FC:E5"] = VendorData("Samsung", "Mobile", "Phone")
+
+            // Xiaomi
+            ouiMap["00:9E:6B"] = VendorData("Xiaomi", "Mobile", "Phone")
+            ouiMap["18:59:36"] = VendorData("Xiaomi", "Mobile", "Phone")
+            ouiMap["F4:8E:92"] = VendorData("Xiaomi", "Mobile", "Phone")
+            ouiMap["28:D2:44"] = VendorData("Xiaomi", "Mobile", "Phone")
+            ouiMap["64:90:C1"] = VendorData("Xiaomi", "Mobile", "Phone")
+            ouiMap["34:2E:B7"] = VendorData("Xiaomi", "Mobile", "Phone")
+
+            // Google / Nest
+            ouiMap["00:1A:11"] = VendorData("Google", "Multimedia", "Cast Device")
+            ouiMap["3C:5C:A1"] = VendorData("Google", "Multimedia", "Cast Device")
+            ouiMap["D8:EB:97"] = VendorData("Google", "Multimedia", "Cast Device")
+
+            // Amazon
+            ouiMap["00:BB:3A"] = VendorData("Amazon", "Smart Device", "Echo")
+            ouiMap["F0:27:2D"] = VendorData("Amazon", "Smart Device", "Kindle")
+
+            // Espressif (IoT)
+            ouiMap["24:0A:C4"] = VendorData("Espressif", "IoT", "Smart Device")
+            ouiMap["30:AE:A4"] = VendorData("Espressif", "IoT", "Smart Device")
+            ouiMap["C8:2B:96"] = VendorData("Espressif", "IoT", "Smart Device")
+
+            loadFromAssets(context)
+            loadFromCache(context)
+            isInitialized = true
+        }
+        loadOverrides(context)
+    }
+
+    private fun loadOverrides(context: Context) {
+        try {
+            val db = AppDatabase.getDatabase(context)
+            runBlocking(Dispatchers.IO) {
+                val overrides = db.vendorOverrideDao().getAllOverrides()
+                overrides.forEach { override ->
+                    val key = override.mac.uppercase().replace("-", ":")
+                    val vData = VendorData(override.customVendor, type = override.customType ?: "Unknown")
+                    overrideMap[key] = vData
+                    if (key.length >= 8) {
+                        overrideMap[key.take(8)] = vData
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun setCustomOverride(mac: String, vendor: String) {
+        val cleanMac = mac.uppercase().replace("-", ":")
+        val vData = VendorData(vendor)
+        overrideMap[cleanMac] = vData
+        if (cleanMac.length >= 8) {
+            overrideMap[cleanMac.take(8)] = vData
+        }
+        _vendorUpdates.tryEmit(cleanMac)
     }
 
     private fun loadFromAssets(context: Context) {
@@ -179,6 +258,11 @@ object VendorDatabase {
         val fullMac = mac.uppercase().replace("-", ":")
         val prefix = fullMac.take(8)
 
+        // 1. Check Full MAC in custom overrides
+        overrideMap[fullMac]?.let { return it }
+        // 2. Check Prefix MAC in custom overrides
+        overrideMap[prefix]?.let { return it }
+        // 3. Check OUI map in memory
         ouiMap[prefix]?.let { return it }
 
         if (pendingFetches.add(prefix)) {
@@ -190,10 +274,11 @@ object VendorDatabase {
                         null
                     } ?: return@launch
                     
-                    val override = db.vendorOverrideDao().getOverride(prefix)
+                    val override = db.vendorOverrideDao().getOverrideByMacOrPrefix(fullMac, prefix)
                     if (override != null) {
                         val vData = VendorData(override.customVendor, type = override.customType ?: "Unknown")
-                        ouiMap[prefix] = vData
+                        overrideMap[fullMac] = vData
+                        overrideMap[prefix] = vData
                         _vendorUpdates.emit(fullMac)
                         return@launch
                     }
@@ -285,7 +370,11 @@ object VendorDatabase {
 
     fun getVendorDataSync(mac: String?): VendorData {
         if (mac == null || mac.length < 8) return VendorData("Unknown")
-        val prefix = mac.uppercase().replace("-", ":").take(8)
+        val fullMac = mac.uppercase().replace("-", ":")
+        val prefix = fullMac.take(8)
+
+        overrideMap[fullMac]?.let { return it }
+        overrideMap[prefix]?.let { return it }
         return ouiMap[prefix] ?: VendorData("Unknown")
     }
 
@@ -302,5 +391,20 @@ object VendorDatabase {
         } catch (e: Exception) {
             false
         }
+    }
+
+    fun reloadCache(context: Context) {
+        loadFromCache(context)
+        loadOverrides(context)
+    }
+
+    fun getLastUpdateTimestamp(context: Context): Long {
+        val prefs = context.getSharedPreferences("netez_prefs", Context.MODE_PRIVATE)
+        return prefs.getLong("oui_last_update", 0L)
+    }
+
+    fun getCacheRecordCount(context: Context): Int {
+        val prefs = context.getSharedPreferences("netez_prefs", Context.MODE_PRIVATE)
+        return prefs.getInt("oui_record_count", 0)
     }
 }

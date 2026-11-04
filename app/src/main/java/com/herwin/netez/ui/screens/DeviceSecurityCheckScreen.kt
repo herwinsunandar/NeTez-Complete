@@ -5,6 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -23,7 +26,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
@@ -38,8 +40,10 @@ import com.herwin.netez.device.DeviceCheckAction
 import com.herwin.netez.device.DeviceCheckItem
 import com.herwin.netez.device.DeviceCheckStatus
 import com.herwin.netez.device.DeviceSecurityAuditResult
+import com.herwin.netez.entitlement.FeatureAccessManager
+import com.herwin.netez.entitlement.FeatureId
 import com.herwin.netez.ui.AppIcons
-import com.herwin.netez.ui.theme.PremiumNavy
+import com.herwin.netez.ui.components.ContextualPaywallDialog
 import com.herwin.netez.ui.theme.SoftDarkBg
 import com.herwin.netez.ui.theme.TextGray
 import com.herwin.netez.ui.viewmodels.DeviceSecurityViewModel
@@ -49,11 +53,36 @@ fun DeviceSecurityCheckScreen(
     viewModel: DeviceSecurityViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val accessManager = remember { FeatureAccessManager.getInstance(context) }
+    var showPaywallDialog by remember { mutableStateOf(false) }
+
+    val pdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri: Uri? ->
+        uri?.let { viewModel.exportPdfReport(context, it) }
+    }
+
+    if (showPaywallDialog) {
+        ContextualPaywallDialog(
+            featureId = FeatureId.REPORT_EXPORT,
+            limitText = "Professional Device Security Audit PDF Report export is available in NeTez PRO.",
+            onDismiss = { showPaywallDialog = false },
+            onUpgradeClick = {}
+        )
+    }
+
+    LaunchedEffect(viewModel.actionMessage) {
+        viewModel.actionMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.actionMessage = null
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PremiumNavy)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         uiState.auditResult?.let { result ->
             LazyColumn(
@@ -66,39 +95,38 @@ fun DeviceSecurityCheckScreen(
                     DeviceInfoCard(result)
                 }
 
-                // 2. Score Card
+                // 2. Score Card & Report Actions
                 item {
-                    DeviceSecurityScoreCard(result)
+                    DeviceSecurityScoreCard(
+                        result = result,
+                        context = context,
+                        viewModel = viewModel,
+                        onExportPdf = {
+                            if (!accessManager.isPro()) {
+                                showPaywallDialog = true
+                            } else {
+                                val cleanModel = "${result.manufacturer}_${result.model}".replace(Regex("[^a-zA-Z0-9]"), "_")
+                                pdfExportLauncher.launch("Device_Security_${cleanModel}.pdf")
+                            }
+                        }
+                    )
                 }
 
                 // 3. Scan Controls
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(
-                            onClick = { viewModel.startScan() },
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C8CFF)),
-                            enabled = !uiState.isScanning
-                        ) {
-                            if (uiState.isScanning) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(AppIcons.scan(), null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.scan_now).uppercase(), fontWeight = FontWeight.ExtraBold)
-                            }
-                        }
-                        
-                        OutlinedButton(
-                            onClick = { viewModel.shareReport() },
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.dp, Color(0xFF6C8CFF).copy(alpha = 0.5f))
-                        ) {
-                            Icon(AppIcons.share(), null, tint = Color(0xFF6C8CFF))
+                    Button(
+                        onClick = { viewModel.startScan() },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        enabled = !uiState.isScanning
+                    ) {
+                        if (uiState.isScanning) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                        } else {
+                            Icon(AppIcons.scan(), null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.share_report).uppercase(), color = Color(0xFF6C8CFF), fontWeight = FontWeight.Bold)
+                            Text("RE-SCAN DEVICE", fontWeight = FontWeight.ExtraBold)
                         }
                     }
                 }
@@ -157,7 +185,12 @@ fun DeviceInfoCard(result: DeviceSecurityAuditResult) {
 }
 
 @Composable
-fun DeviceSecurityScoreCard(result: DeviceSecurityAuditResult) {
+fun DeviceSecurityScoreCard(
+    result: DeviceSecurityAuditResult,
+    context: Context,
+    viewModel: DeviceSecurityViewModel,
+    onExportPdf: () -> Unit
+) {
     val scoreColor = when {
         result.securityScore >= 90 -> Color(0xFF4CAF50)
         result.securityScore >= 75 -> Color(0xFF4CAF50)
@@ -196,6 +229,59 @@ fun DeviceSecurityScoreCard(result: DeviceSecurityAuditResult) {
                 StatusCounter(stringResource(R.string.status_critical), result.criticalCount, Color(0xFFFF5252))
                 StatusCounter(stringResource(R.string.status_warning), result.warningCount, Color(0xFFFBBF24))
                 StatusCounter(stringResource(R.string.status_safe), result.safeCount, Color(0xFF4CAF50))
+            }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+            Spacer(Modifier.height(16.dp))
+
+            // Export Actions Row (1 Row Side-By-Side)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = { viewModel.copyReportToClipboard(context) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    Icon(painter = AppIcons.contentCopy(), contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                    Spacer(Modifier.width(4.dp))
+                    Text("COPY", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                }
+
+                OutlinedButton(
+                    onClick = { viewModel.shareReport() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    Icon(painter = AppIcons.share(), contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                    Spacer(Modifier.width(4.dp))
+                    Text("SHARE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                }
+
+                Button(
+                    onClick = onExportPdf,
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    Icon(painter = AppIcons.download(), contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("PDF REPORT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                }
             }
         }
     }
