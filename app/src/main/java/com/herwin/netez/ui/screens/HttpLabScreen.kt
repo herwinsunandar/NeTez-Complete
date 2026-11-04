@@ -9,12 +9,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,8 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -33,12 +32,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.herwin.netez.R
+import com.herwin.netez.data.HttpHistory
 import com.herwin.netez.ui.AppIcons
 import com.herwin.netez.ui.components.ResultRow
 import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.viewmodels.HttpLabViewModel
 import com.herwin.netez.ui.viewmodels.HttpResponseData
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,233 +48,377 @@ fun HttpLabScreen(
     viewModel: HttpLabViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Params", "Headers", "Body", "Auth")
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Request Configuration Card
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-            tonalElevation = 2.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "API Request Builder",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+    var showCurlDialog by remember { mutableStateOf(false) }
+    var showHistorySheet by remember { mutableStateOf(false) }
 
-                // Method + URL + Send Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Method Selector Dropdown
-                    var methodExpanded by remember { mutableStateOf(false) }
-                    Box {
-                        val methodColor = getMethodColor(uiState.method)
-                        Surface(
-                            onClick = { methodExpanded = true },
-                            shape = RoundedCornerShape(12.dp),
-                            color = methodColor.copy(alpha = 0.15f),
-                            border = BorderStroke(1.dp, methodColor.copy(alpha = 0.5f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = uiState.method,
-                                    fontFamily = TechMonospace,
-                                    fontWeight = FontWeight.Bold,
-                                    color = methodColor,
-                                    fontSize = 13.sp
-                                )
-                                Icon(
-                                    painter = AppIcons.arrowDropDown(),
-                                    contentDescription = "Select Method",
-                                    tint = methodColor,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        DropdownMenu(
-                            expanded = methodExpanded,
-                            onDismissRequest = { methodExpanded = false },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                        ) {
-                            listOf("GET", "POST", "PUT", "DELETE", "PATCH").forEach { m ->
-                                val color = getMethodColor(m)
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = m,
-                                            fontFamily = TechMonospace,
-                                            fontWeight = FontWeight.Bold,
-                                            color = color
-                                        )
-                                    },
-                                    onClick = {
-                                        viewModel.updateMethod(m)
-                                        methodExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // URL Input Field
-                    OutlinedTextField(
-                        value = uiState.url,
-                        onValueChange = { viewModel.updateUrl(it) },
-                        modifier = Modifier.weight(1f),
-                        placeholder = {
-                            Text(
-                                text = "https://api.example.com/v1",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                fontSize = 13.sp
-                            )
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Uri,
-                            imeAction = ImeAction.Go
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "API Tester / HTTP Lab",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
                     )
-
-                    // Send Button
-                    Button(
-                        onClick = { viewModel.sendRequest() },
-                        enabled = !uiState.isLoading && uiState.url.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = "SEND",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(AppIcons.arrowBack(), contentDescription = "Back")
                     }
-                }
-
-                if (uiState.isLoading) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    )
-                }
-            }
-        }
-
-        // Sub-Tabs Navigation (Params, Headers, Body, Auth)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-            tonalElevation = 2.dp
+                },
+                actions = {
+                    TextButton(onClick = { showCurlDialog = true }) {
+                        Text("cURL", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = { showHistorySheet = true }) {
+                        Icon(AppIcons.history(), contentDescription = "Request History", tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                SecondaryTabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = {
-                                Text(
-                                    text = title,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            },
-                            selectedContentColor = MaterialTheme.colorScheme.primary,
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 160.dp, max = 220.dp)
-                ) {
-                    when (selectedTab) {
-                        0 -> ParamsTab(uiState.params, viewModel)
-                        1 -> HeadersTab(uiState.headers, viewModel)
-                        2 -> BodyTab(uiState.body, uiState.contentType, viewModel)
-                        3 -> AuthTab(uiState.authType, uiState.authValue, viewModel)
-                    }
-                }
-            }
-        }
-
-        // Response or Error Section
-        uiState.error?.let { err ->
+            // Request Configuration Card
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                tonalElevation = 2.dp
             ) {
-                Row(
+                Column(
                     modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        painter = AppIcons.error(),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(Modifier.width(10.dp))
                     Text(
-                        text = err,
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        text = "API Request Builder",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+
+                    // Method + URL + Send Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Method Selector Dropdown
+                        var methodExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            val methodColor = getMethodColor(uiState.method)
+                            Surface(
+                                onClick = { methodExpanded = true },
+                                shape = RoundedCornerShape(12.dp),
+                                color = methodColor.copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, methodColor.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = uiState.method,
+                                        fontFamily = TechMonospace,
+                                        fontWeight = FontWeight.Bold,
+                                        color = methodColor,
+                                        fontSize = 13.sp
+                                    )
+                                    Icon(
+                                        painter = AppIcons.arrowDropDown(),
+                                        contentDescription = "Select Method",
+                                        tint = methodColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = methodExpanded,
+                                onDismissRequest = { methodExpanded = false },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                            ) {
+                                listOf("GET", "POST", "PUT", "DELETE", "PATCH").forEach { m ->
+                                    val color = getMethodColor(m)
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = m,
+                                                fontFamily = TechMonospace,
+                                                fontWeight = FontWeight.Bold,
+                                                color = color
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.updateMethod(m)
+                                            methodExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // URL Input Field
+                        OutlinedTextField(
+                            value = uiState.url,
+                            onValueChange = { viewModel.updateUrl(it) },
+                            modifier = Modifier.weight(1f),
+                            placeholder = {
+                                Text(
+                                    text = "https://api.example.com/v1",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    fontSize = 13.sp
+                                )
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Go
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        )
+
+                        // Send Button
+                        Button(
+                            onClick = { viewModel.sendRequest() },
+                            enabled = !uiState.isLoading && uiState.url.isNotBlank(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = "SEND",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    // Self-Signed SSL Toggle
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { viewModel.updateAllowSelfSigned(!uiState.allowSelfSigned) }
+                    ) {
+                        Checkbox(
+                            checked = uiState.allowSelfSigned,
+                            onCheckedChange = { viewModel.updateAllowSelfSigned(it) }
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Bypass SSL / Allow Self-Signed Certificates (Local Staging/Router)",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (uiState.isLoading) {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        )
+                    }
                 }
             }
-        }
 
-        uiState.response?.let { resp ->
-            ResponseSection(resp)
+            // Sub-Tabs Navigation (Params, Headers, Body, Auth)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                tonalElevation = 2.dp
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    SecondaryTabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                text = {
+                                    Text(
+                                        text = title,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                },
+                                selectedContentColor = MaterialTheme.colorScheme.primary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 160.dp, max = 220.dp)
+                    ) {
+                        when (selectedTab) {
+                            0 -> ParamsTab(uiState.params, viewModel)
+                            1 -> HeadersTab(uiState.headers, viewModel)
+                            2 -> BodyTab(uiState.body, uiState.contentType, viewModel)
+                            3 -> AuthTab(uiState.authType, uiState.authValue, viewModel)
+                        }
+                    }
+                }
+            }
+
+            // Response or Error Section
+            uiState.error?.let { err ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = AppIcons.error(),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = err,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            uiState.response?.let { resp ->
+                ResponseSection(resp)
+            }
+        }
+    }
+
+    if (showCurlDialog) {
+        var curlInput by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showCurlDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Import cURL Command", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = curlInput,
+                    onValueChange = { curlInput = it },
+                    placeholder = { Text("Paste curl 'https://api.example.com' -H 'Header: Value'...", fontSize = 12.sp, fontFamily = TechMonospace) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp),
+                    textStyle = TextStyle(fontFamily = TechMonospace, fontSize = 12.sp)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (curlInput.isNotBlank()) {
+                            viewModel.parseCurl(curlInput)
+                            Toast.makeText(context, "cURL imported successfully", Toast.LENGTH_SHORT).show()
+                        }
+                        showCurlDialog = false
+                    }
+                ) {
+                    Text("IMPORT")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCurlDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showHistorySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showHistorySheet = false },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.padding(20.dp).padding(bottom = 32.dp)) {
+                Text("Recent API Requests", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Tap any history item to auto-fill API request", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Spacer(Modifier.height(14.dp))
+                if (uiState.history.isEmpty()) {
+                    Text("No API request history yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(uiState.history) { item ->
+                            Surface(
+                                onClick = {
+                                    viewModel.loadHistoryItem(item)
+                                    showHistorySheet = false
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val color = getMethodColor(item.method)
+                                    Surface(
+                                        color = color.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = item.method,
+                                            color = color,
+                                            fontFamily = TechMonospace,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(item.url, fontSize = 12.sp, fontFamily = TechMonospace, fontWeight = FontWeight.Bold)
+                                        Text("Code: ${item.responseCode} • Time: ${item.responseTime} ms", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

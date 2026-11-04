@@ -29,16 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.herwin.netez.R
+import com.herwin.netez.entitlement.FeatureId
 import com.herwin.netez.ui.AppIcons
+import com.herwin.netez.ui.components.ContextualPaywallDialog
 import com.herwin.netez.ui.theme.TechMonospace
 import com.herwin.netez.ui.viewmodels.SpeedTestStage
 import com.herwin.netez.ui.viewmodels.SpeedTestViewModel
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
-
-import com.herwin.netez.entitlement.FeatureId
-import com.herwin.netez.ui.components.ContextualPaywallDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +67,7 @@ fun SpeedTestScreen(viewModel: SpeedTestViewModel = viewModel()) {
     val formattedResult = remember(uiState) {
         """
         🚀 NeTez Speed Test Result
+        • Provider: ${uiState.isp}
         • Download: ${String.format(Locale.US, "%.1f", uiState.downloadSpeed)} Mbps
         • Upload: ${String.format(Locale.US, "%.1f", uiState.uploadSpeed)} Mbps
         • Ping: ${uiState.pingMs.toInt()} ms
@@ -186,7 +186,7 @@ fun SpeedTestScreen(viewModel: SpeedTestViewModel = viewModel()) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Download ${String.format(Locale.US, "%.1f", uiState.downloadSpeed)} Mbps • Upload ${String.format(Locale.US, "%.1f", uiState.uploadSpeed)} Mbps\nPing ${uiState.pingMs.toInt()} ms • Jitter ${uiState.jitterMs.toInt()} ms • ${uiState.selectedServer}",
+                            text = "Provider: ${uiState.isp}\nDownload ${String.format(Locale.US, "%.1f", uiState.downloadSpeed)} Mbps • Upload ${String.format(Locale.US, "%.1f", uiState.uploadSpeed)} Mbps\nPing ${uiState.pingMs.toInt()} ms • Jitter ${uiState.jitterMs.toInt()} ms • ${uiState.selectedServer}",
                             style = MaterialTheme.typography.bodySmall,
                             fontFamily = TechMonospace,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -197,6 +197,35 @@ fun SpeedTestScreen(viewModel: SpeedTestViewModel = viewModel()) {
                 }
                 Spacer(Modifier.height(14.dp))
             }
+
+            // ISP / Provider Badge
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = AppIcons.public(),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Network Provider: ${uiState.isp}",
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
 
             // 5. Server Selector Bar
             Surface(
@@ -797,30 +826,62 @@ fun ServerSelectionDialog(
     onSelect: (String) -> Unit
 ) {
     var customServer by remember { mutableStateOf("") }
+    val presetServers = listOf(
+        Pair("Cloudflare Global CDN", "speed.cloudflare.com"),
+        Pair("Google Edge CDN", "speedtest.tele2.net"),
+        Pair("Singapore APAC Node", "sg-speedtest.fast.com")
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text("Select Test Server", color = MaterialTheme.colorScheme.onSurface) },
+        title = { Text("Select SpeedTest Server", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = { onSelect("speed.cloudflare.com") },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Cloudflare Global")
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                presetServers.forEach { (name, server) ->
+                    val isSelected = currentServer == server
+                    Surface(
+                        onClick = { onSelect(server) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text(server, fontSize = 11.sp, fontFamily = TechMonospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (isSelected) {
+                                Text("✓", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
                 }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                Text("Custom SpeedTest Server", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 OutlinedTextField(
                     value = customServer,
                     onValueChange = { customServer = it },
-                    placeholder = { Text("e.g. speed.cloudflare.com") },
+                    placeholder = { Text("e.g. speed.cloudflare.com", fontSize = 12.sp) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { if (customServer.isNotEmpty()) onSelect(customServer) }) {
-                Text("OK")
+            Button(
+                onClick = { if (customServer.isNotBlank()) onSelect(customServer.trim()) },
+                enabled = customServer.isNotBlank()
+            ) {
+                Text("APPLY CUSTOM")
             }
         },
         dismissButton = {

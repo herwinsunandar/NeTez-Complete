@@ -56,10 +56,10 @@ object WhoisManager {
             val trimmedQuery = query.trim()
             val isIp = isIpAddress(trimmedQuery)
             
-            val urlString = if (isIp) {
-                "http://ip-api.com/json/$trimmedQuery?fields=66846719"
-            } else {
-                "https://rdap.org/domain/${trimmedQuery.lowercase()}"
+            val urlString = when {
+                trimmedQuery.isBlank() -> "http://ip-api.com/json/?fields=66846719"
+                isIp -> "http://ip-api.com/json/$trimmedQuery?fields=66846719"
+                else -> "https://rdap.org/domain/${trimmedQuery.lowercase()}"
             }
 
             val url = URL(urlString)

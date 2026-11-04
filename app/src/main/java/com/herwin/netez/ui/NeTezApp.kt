@@ -118,7 +118,7 @@ fun NeTezApp() {
                     val isTabSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
 
                     NavigationBarItem(
-                        icon = { 
+                        icon = {
                             BadgedBox(
                                 badge = {
                                     if (hasBadge) {

@@ -64,6 +64,20 @@ class HttpLabViewModel(application: Application) : AndroidViewModel(application)
     fun updateAuthType(type: String) = updateState { it.copy(authType = type) }
     fun updateAuthValue(value: String) = updateState { it.copy(authValue = value) }
     fun updateAllowSelfSigned(allow: Boolean) = updateState { it.copy(allowSelfSigned = allow) }
+
+    fun loadHistoryItem(item: HttpHistory) {
+        updateState {
+            it.copy(
+                method = item.method,
+                url = item.url,
+                error = null
+            )
+        }
+    }
+
+    fun clearError() {
+        updateState { it.copy(error = null) }
+    }
     
     fun addParam() = updateState { it.copy(params = it.params + ("" to "")) }
     fun updateParam(index: Int, key: String, value: String) {

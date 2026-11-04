@@ -38,6 +38,13 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -97,6 +104,16 @@ fun WhoisScreen(viewModel: WhoisViewModel = viewModel()) {
                         }
                     }
                 )
+
+                OutlinedButton(
+                    onClick = { viewModel.fetchMyIpInfo() },
+                    enabled = !uiState.isLoading,
+                    modifier = Modifier.height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp)
+                ) {
+                    Text("MY IP", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
 
                 Button(
                     onClick = { viewModel.fetchInfo() },

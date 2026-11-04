@@ -2,6 +2,7 @@ package com.herwin.netez.ui.viewmodels
 
 import android.app.Application
 import android.content.Context
+import android.os.Environment
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -50,7 +51,35 @@ class TftpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateServerIp(ip: String) { _uiState.update { it.copy(serverIp = ip) } }
     fun updatePort(port: String) { _uiState.update { it.copy(port = port) } }
-    fun updateRemoteFileName(name: String) { _uiState.update { it.copy(remoteFileName = name) } }
+    fun updateRemoteFileName(name: String) {
+        _uiState.update { state ->
+            val cleanName = name.trim()
+            val autoLocalPath = if (state.localPath.isBlank() && cleanName.isNotBlank()) {
+                val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), cleanName)
+                downloadsDir.absolutePath
+            } else {
+                state.localPath
+            }
+            state.copy(remoteFileName = cleanName, localPath = autoLocalPath)
+        }
+    }
+
+    fun selectHistoryItem(item: TftpHistoryItem) {
+        _uiState.update { state ->
+            val cleanName = item.file
+            val autoLocalPath = if (state.localPath.isBlank() && cleanName.isNotBlank()) {
+                val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), cleanName)
+                downloadsDir.absolutePath
+            } else {
+                state.localPath
+            }
+            state.copy(
+                serverIp = item.host,
+                remoteFileName = cleanName,
+                localPath = autoLocalPath
+            )
+        }
+    }
     fun updateLocalPath(path: String) { _uiState.update { it.copy(localPath = path) } }
     fun updateMode(mode: TftpMode) { _uiState.update { it.copy(mode = mode) } }
 

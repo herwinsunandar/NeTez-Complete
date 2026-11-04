@@ -19,7 +19,8 @@ import java.util.Locale
 data class WhoisState(
     val query: String = "",
     val result: WhoisResult? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 class WhoisViewModel(application: Application) : AndroidViewModel(application) {
@@ -27,21 +28,49 @@ class WhoisViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<WhoisState> = _uiState
 
     fun updateQuery(newQuery: String) {
-        _uiState.value = _uiState.value.copy(query = newQuery)
+        _uiState.value = _uiState.value.copy(query = newQuery, error = null)
     }
 
     fun fetchInfo() {
-        val targetQuery = _uiState.value.query.trim().ifBlank { "8.8.8.8" }
+        val targetQuery = _uiState.value.query.trim()
+        if (targetQuery.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "Please enter an IP address or domain name (e.g. 8.8.8.8 or google.com)"
+            )
+            return
+        }
 
         _uiState.value = _uiState.value.copy(
             isLoading = true,
             result = null,
-            query = _uiState.value.query.ifBlank { targetQuery }
+            error = null,
+            query = targetQuery
         )
         viewModelScope.launch {
             val result = WhoisManager.getInfo(targetQuery)
             _uiState.value = _uiState.value.copy(isLoading = false, result = result)
         }
+    }
+
+    fun fetchMyIpInfo() {
+        _uiState.value = _uiState.value.copy(
+            isLoading = true,
+            result = null,
+            error = null
+        )
+        viewModelScope.launch {
+            val result = WhoisManager.getInfo("")
+            val detectedIp = if (result is WhoisResult.Ip) result.info.query else ""
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                query = detectedIp,
+                result = result
+            )
+        }
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
     }
 
     fun getShareText(): String {
